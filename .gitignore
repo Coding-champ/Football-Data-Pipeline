@@ -15,8 +15,10 @@ ENV/
 # data/football_data.db
 
 # Test databases and temporary files
-data/test_*.db
-data/demo_*.db
+data/test*.db
+data/demo*.db
+data/validation*.db
+data/final_test*.db
 data/*_report.json
 data/dashboard_data.json
 data/api_usage.json
