@@ -1,0 +1,28 @@
+# Football Data Pipeline - Python Dependencies
+
+# Core API & Data Processing
+requests>=2.31.0
+python-dateutil>=2.8.2
+pytz>=2023.3
+
+# Database
+# sqlite3 is built into Python
+
+# Data Analysis & Visualization  
+pandas>=2.0.3
+numpy>=1.24.4
+
+# Dashboard
+streamlit>=1.28.1
+plotly>=5.17.0
+seaborn>=0.12.2
+matplotlib>=3.7.2
+
+# Discord Integration (Optional)
+discord.py>=2.3.2
+
+# Template Engine for Static Dashboard
+jinja2>=3.1.2
+
+# Additional utilities
+python-dotenv>=1.0.0

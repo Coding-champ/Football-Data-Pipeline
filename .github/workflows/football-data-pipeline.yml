@@ -1,0 +1,1783 @@
+# .github/workflows/enhanced-football-pipeline.yml
+name: Enhanced Football Data Pipeline with Database
+
+on:
+  schedule:
+    # Täglich neue Jobs erstellen (8 Uhr UTC = 9/10 Uhr Deutschland)
+    - cron: '0 8 * * *'
+    # Job Processing alle 30 Minuten
+    - cron: '*/30 * * * *'
+    # Zusätzlich: Spätabends für südamerikanische Spiele
+    - cron: '0 22 * * *'
+  
+  workflow_dispatch:
+    inputs:
+      force_collection:
+        description: 'Force immediate data collection'
+        required: false
+        default: 'false'
+      specific_league:
+        description: 'League ID for specific collection'
+        required: false
+        default: ''
+
+env:
+  API_FOOTBALL_KEY: ${{ secrets.API_FOOTBALL_KEY }}
+  ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
+  DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+
+jobs:
+  create-jobs:
+    if: contains(github.event.schedule, '0 8 * * *') || contains(github.event.schedule, '0 22 * * *') || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+        
+    - name: Install Dependencies
+      run: |
+        pip install requests python-dateutil pytz
+        
+    - name: Initialize Database
+      run: |
+        mkdir -p data
+        python << 'EOF'
+        import sqlite3
+        
+        # Database Schema
+        schema_sql = '''
+        CREATE TABLE IF NOT EXISTS teams (
+            id INTEGER PRIMARY KEY,
+            name TEXT NOT NULL,
+            country TEXT,
+            logo_url TEXT,
+            founded INTEGER,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+
+        CREATE TABLE IF NOT EXISTS leagues (
+            id INTEGER PRIMARY KEY,
+            name TEXT NOT NULL,
+            country TEXT,
+            season INTEGER NOT NULL,
+            logo_url TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(id, season)
+        );
+
+        CREATE TABLE IF NOT EXISTS fixtures (
+            id INTEGER PRIMARY KEY,
+            league_id INTEGER NOT NULL,
+            season INTEGER NOT NULL,
+            home_team_id INTEGER NOT NULL,
+            away_team_id INTEGER NOT NULL,
+            kickoff_utc TIMESTAMP NOT NULL,
+            venue_name TEXT,
+            status TEXT DEFAULT 'scheduled',
+            home_score INTEGER,
+            away_score INTEGER,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (league_id) REFERENCES leagues(id),
+            FOREIGN KEY (home_team_id) REFERENCES teams(id),
+            FOREIGN KEY (away_team_id) REFERENCES teams(id)
+        );
+
+        CREATE TABLE IF NOT EXISTS odds_history (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            fixture_id INTEGER NOT NULL,
+            bookmaker TEXT NOT NULL,
+            market_type TEXT NOT NULL,
+            home_odds REAL,
+            draw_odds REAL,
+            away_odds REAL,
+            over_odds REAL,
+            under_odds REAL,
+            handicap REAL,
+            total_points REAL,
+            collected_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            collection_phase TEXT NOT NULL,
+            FOREIGN KEY (fixture_id) REFERENCES fixtures(id)
+        );
+
+        CREATE TABLE IF NOT EXISTS team_statistics (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            team_id INTEGER NOT NULL,
+            league_id INTEGER NOT NULL,
+            season INTEGER NOT NULL,
+            collection_date DATE NOT NULL,
+            matches_played INTEGER DEFAULT 0,
+            wins INTEGER DEFAULT 0,
+            draws INTEGER DEFAULT 0,
+            losses INTEGER DEFAULT 0,
+            goals_for INTEGER DEFAULT 0,
+            goals_against INTEGER DEFAULT 0,
+            win_percentage REAL DEFAULT 0,
+            form_last_5 TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (team_id) REFERENCES teams(id),
+            FOREIGN KEY (league_id) REFERENCES leagues(id),
+            UNIQUE(team_id, league_id, season, collection_date)
+        );
+
+        CREATE TABLE IF NOT EXISTS team_events (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            team_id INTEGER NOT NULL,
+            player_id INTEGER,
+            event_type TEXT NOT NULL,
+            event_description TEXT,
+            severity TEXT,
+            start_date DATE NOT NULL,
+            end_date DATE,
+            detected_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            source TEXT,
+            FOREIGN KEY (team_id) REFERENCES teams(id)
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_fixtures_kickoff ON fixtures(kickoff_utc);
+        CREATE INDEX IF NOT EXISTS idx_odds_fixture ON odds_history(fixture_id, market_type, collected_at);
+        CREATE INDEX IF NOT EXISTS idx_odds_collected ON odds_history(collected_at);
+        CREATE INDEX IF NOT EXISTS idx_team_stats_date ON team_statistics(collection_date);
+        CREATE INDEX IF NOT EXISTS idx_events_detected ON team_events(detected_at);
+        '''
+        
+        conn = sqlite3.connect('data/football_data.db')
+        conn.executescript(schema_sql)
+        conn.commit()
+        conn.close()
+        print("✅ Database initialized successfully")
+        EOF
+    
+    - name: Create Job Queue
+      run: |
+        python << 'EOF'
+        import json
+        import requests
+        from datetime import datetime, timedelta
+        import os
+        import pytz
+        
+        # Liga-Konfiguration
+        EUROPEAN_LEAGUES = {
+            39: {'name': 'Premier League', 'priority': 'high', 'timezone': 'Europe/London'},
+            140: {'name': 'La Liga', 'priority': 'high', 'timezone': 'Europe/Madrid'},
+            135: {'name': 'Serie A', 'priority': 'high', 'timezone': 'Europe/Rome'},
+            78: {'name': 'Bundesliga', 'priority': 'high', 'timezone': 'Europe/Berlin'},
+            61: {'name': 'Ligue 1', 'priority': 'high', 'timezone': 'Europe/Paris'},
+            2: {'name': 'Champions League', 'priority': 'highest', 'timezone': 'Europe/Zurich'},
+            3: {'name': 'Europa League', 'priority': 'medium', 'timezone': 'Europe/Zurich'}
+        }
+        
+        SOUTH_AMERICAN_LEAGUES = {
+            13: {'name': 'Copa Libertadores', 'priority': 'high', 'timezone': 'America/Sao_Paulo'},
+            71: {'name': 'Brasileirão Serie A', 'priority': 'medium', 'timezone': 'America/Sao_Paulo'},
+            128: {'name': 'Liga Profesional Argentina', 'priority': 'medium', 'timezone': 'America/Argentina/Buenos_Aires'},
+            239: {'name': 'Copa Sudamericana', 'priority': 'medium', 'timezone': 'America/Sao_Paulo'}
+        }
+        
+        current_hour = datetime.now().hour
+        if 6 <= current_hour <= 18:
+            active_leagues = EUROPEAN_LEAGUES
+            print("🇪🇺 Focusing on European leagues")
+        else:
+            active_leagues = {**EUROPEAN_LEAGUES, **SOUTH_AMERICAN_LEAGUES}
+            print("🌎 Including South American leagues")
+        
+        specific_league = "${{ github.event.inputs.specific_league }}"
+        if specific_league:
+            league_id = int(specific_league)
+            active_leagues = {k: v for k, v in active_leagues.items() if k == league_id}
+            print(f"🎯 Focusing on specific league: {league_id}")
+        
+        headers = {
+            'X-RapidAPI-Key': os.getenv('API_FOOTBALL_KEY'),
+            'X-RapidAPI-Host': 'api-football-v1.p.rapidapi.com'
+        }
+        
+        upcoming_games = []
+        today = datetime.now().strftime('%Y-%m-%d')
+        tomorrow = (datetime.now() + timedelta(days=1)).strftime('%Y-%m-%d')
+        day_after = (datetime.now() + timedelta(days=2)).strftime('%Y-%m-%d')
+        
+        print(f"🔍 Scanning dates: {today}, {tomorrow}, {day_after}")
+        
+        for league_id, config in active_leagues.items():
+            print(f"\n📊 Checking {config['name']}...")
+            
+            for date in [today, tomorrow, day_after]:
+                url = "https://api-football-v1.p.rapidapi.com/v3/fixtures"
+                params = {'league': league_id, 'date': date, 'status': 'NS'}
+                
+                try:
+                    response = requests.get(url, headers=headers, params=params, timeout=15)
+                    
+                    if response.status_code == 429:
+                        print(f"⚠️ Rate limited for {config['name']}")
+                        continue
+                    elif response.status_code != 200:
+                        print(f"⚠️ API Error {response.status_code} for {config['name']}")
+                        continue
+                    
+                    data = response.json()
+                    fixtures = data.get('response', [])
+                    
+                    for fixture in fixtures:
+                        try:
+                            kickoff_str = fixture['fixture']['date']
+                            kickoff_utc = datetime.strptime(kickoff_str, '%Y-%m-%dT%H:%M:%S+00:00')
+                            kickoff_utc = kickoff_utc.replace(tzinfo=pytz.UTC)
+                            
+                            now = datetime.now(pytz.UTC)
+                            if now < kickoff_utc < now + timedelta(hours=72):
+                                game_info = {
+                                    'fixture_id': fixture['fixture']['id'],
+                                    'kickoff_utc': kickoff_utc.isoformat(),
+                                    'home_team': fixture['teams']['home']['name'],
+                                    'away_team': fixture['teams']['away']['name'],
+                                    'home_team_id': fixture['teams']['home']['id'],
+                                    'away_team_id': fixture['teams']['away']['id'],
+                                    'league': config['name'],
+                                    'league_id': league_id,
+                                    'country': fixture['league']['country'],
+                                    'venue': fixture['fixture']['venue']['name'] if fixture['fixture']['venue'] else 'TBD',
+                                    'priority': config['priority'],
+                                    'timezone': config['timezone']
+                                }
+                                upcoming_games.append(game_info)
+                                print(f"  ⚽ {game_info['home_team']} vs {game_info['away_team']} at {kickoff_utc}")
+                        
+                        except Exception as e:
+                            print(f"  ⚠️ Error processing fixture: {e}")
+                            continue
+                            
+                except Exception as e:
+                    print(f"  ❌ Request failed: {e}")
+                    continue
+        
+        print(f"\n📈 Total games found: {len(upcoming_games)}")
+        
+        # Erstelle Collection-Jobs
+        jobs = []
+        for game in upcoming_games:
+            kickoff = datetime.fromisoformat(game['kickoff_utc'].replace('Z', '+00:00'))
+            
+            if game['priority'] == 'highest':
+                schedules = [
+                    {'offset_hours': 48, 'type': 'early_odds'},
+                    {'offset_hours': 12, 'type': 'pre_match'},
+                    {'offset_hours': 3, 'type': 'team_news'},
+                    {'offset_hours': 1, 'type': 'final_data'}
+                ]
+            elif game['priority'] == 'high':
+                schedules = [
+                    {'offset_hours': 24, 'type': 'early_odds'},
+                    {'offset_hours': 3, 'type': 'team_news'},
+                    {'offset_hours': 1, 'type': 'final_data'}
+                ]
+            else:
+                schedules = [
+                    {'offset_hours': 6, 'type': 'team_news'},
+                    {'offset_hours': 1, 'type': 'final_data'}
+                ]
+            
+            for schedule in schedules:
+                collection_time = kickoff - timedelta(hours=schedule['offset_hours'])
+                now = datetime.now(pytz.UTC)
+                
+                if collection_time > now:
+                    job = {
+                        'id': f"{game['fixture_id']}_{schedule['type']}",
+                        'fixture_id': game['fixture_id'],
+                        'scheduled_for': collection_time.isoformat(),
+                        'status': 'pending',
+                        'type': schedule['type'],
+                        'priority': game['priority'],
+                        'game_info': game,
+                        'created_at': now.isoformat()
+                    }
+                    jobs.append(job)
+        
+        # Merge mit existierenden Jobs
+        try:
+            with open('jobs.json', 'r') as f:
+                existing_jobs = json.load(f)
+        except FileNotFoundError:
+            existing_jobs = []
+        
+        # Cleanup alter Jobs
+        now = datetime.now(pytz.UTC)
+        active_jobs = []
+        
+        for job in existing_jobs:
+            scheduled_time = datetime.fromisoformat(job['scheduled_for'].replace('Z', '+00:00'))
+            
+            if (job['status'] == 'pending' and scheduled_time > now - timedelta(hours=2)) or \
+               (job['status'] in ['completed', 'failed'] and scheduled_time > now - timedelta(days=3)):
+                active_jobs.append(job)
+        
+        existing_ids = {job['id'] for job in active_jobs}
+        new_jobs = [job for job in jobs if job['id'] not in existing_ids]
+        
+        all_jobs = active_jobs + new_jobs
+        all_jobs.sort(key=lambda x: x['scheduled_for'])
+        
+        with open('jobs.json', 'w') as f:
+            json.dump(all_jobs, f, indent=2)
+        
+        print(f"\n📊 Job Summary:")
+        print(f"  📥 Existing: {len(active_jobs)}")
+        print(f"  ➕ New: {len(new_jobs)}")
+        print(f"  📋 Total: {len(all_jobs)}")
+        
+        # Discord Notification
+        webhook_url = os.getenv('DISCORD_WEBHOOK_URL')
+        if webhook_url and new_jobs:
+            embed = {
+                "title": "🎯 New Games Scheduled",
+                "description": f"Found {len(upcoming_games)} upcoming games\nCreated {len(new_jobs)} collection jobs",
+                "color": 0x00ff00,
+                "fields": [
+                    {
+                        "name": "Next Collections",
+                        "value": "\n".join([f"⚽ {job['game_info']['home_team']} vs {job['game_info']['away_team']}" for job in new_jobs[:5]]),
+                        "inline": False
+                    }
+                ],
+                "timestamp": datetime.now().isoformat()
+            }
+            
+            try:
+                requests.post(webhook_url, json={"embeds": [embed]})
+                print("✅ Discord notification sent")
+            except:
+                print("⚠️ Discord notification failed")
+        EOF
+        
+    - name: Commit Jobs
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        git add .
+        git commit -m "🔄 Update job queue and database" || exit 0
+        git push
+
+  process-jobs:
+    if: contains(github.event.schedule, '*/30 * * * *') || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+        
+    - name: Install Dependencies
+      run: |
+        pip install requests python-dateutil pytz
+        
+    - name: Process Pending Jobs
+      run: |
+        python << 'EOF'
+        import json
+        import requests
+        from datetime import datetime, timedelta
+        import os
+        import pytz
+        import sqlite3
+        
+        def store_fixture_data(collected_data, collection_type):
+            """Store collected data in database"""
+            try:
+                conn = sqlite3.connect('data/football_data.db')
+                fixture_id = collected_data['fixture_id']
+                game_info = collected_data['game_info']
+                api_data = collected_data['data']
+                
+                # Store Teams
+                for team_type in ['home', 'away']:
+                    team_id = game_info[f'{team_type}_team_id']
+                    team_name = game_info[f'{team_type}_team']
+                    
+                    conn.execute("""
+                        INSERT OR IGNORE INTO teams (id, name, country, created_at) 
+                        VALUES (?, ?, ?, ?)
+                    """, (team_id, team_name, game_info.get('country', 'Unknown'), datetime.now()))
+                
+                # Store League
+                league_id = game_info['league_id']
+                league_name = game_info['league']
+                season = datetime.now().year if datetime.now().month >= 8 else datetime.now().year - 1
+                
+                conn.execute("""
+                    INSERT OR IGNORE INTO leagues (id, name, country, season) 
+                    VALUES (?, ?, ?, ?)
+                """, (league_id, league_name, game_info.get('country', 'Unknown'), season))
+                
+                # Store Fixture
+                kickoff = datetime.fromisoformat(game_info['kickoff_utc'].replace('Z', '+00:00'))
+                
+                conn.execute("""
+                    INSERT OR IGNORE INTO fixtures 
+                    (id, league_id, season, home_team_id, away_team_id, kickoff_utc, venue_name)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                """, (fixture_id, league_id, season, game_info['home_team_id'], 
+                     game_info['away_team_id'], kickoff, game_info.get('venue', 'Unknown')))
+                
+                # Store Odds History
+                for odds_key in api_data.keys():
+                    if odds_key.startswith('odds_'):
+                        odds_data = api_data[odds_key]
+                        if odds_data and 'bookmakers' in odds_data:
+                            for bookmaker_data in odds_data['bookmakers']:
+                                bookmaker = bookmaker_data['name']
+                                
+                                for market in bookmaker_data.get('markets', []):
+                                    market_type = market['key']
+                                    
+                                    home_odds = draw_odds = away_odds = None
+                                    
+                                    if market_type == 'h2h':
+                                        outcomes = {o['name']: o['price'] for o in market['outcomes']}
+                                        home_odds = outcomes.get(odds_data.get('home_team', ''))
+                                        away_odds = outcomes.get(odds_data.get('away_team', ''))
+                                        draw_odds = outcomes.get('Draw')
+                                    
+                                    conn.execute("""
+                                        INSERT INTO odds_history 
+                                        (fixture_id, bookmaker, market_type, home_odds, draw_odds, away_odds,
+                                         collected_at, collection_phase)
+                                        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                                    """, (fixture_id, bookmaker, market_type, home_odds, draw_odds, away_odds,
+                                         datetime.now(), collection_type))
+                
+                conn.commit()
+                conn.close()
+                return True
+            except Exception as e:
+                print(f"Database storage error: {e}")
+                return False
+        
+        def collect_game_data(job):
+            """Sammelt Daten basierend auf Job-Typ"""
+            try:
+                fixture_id = job['fixture_id']
+                collection_type = job['type']
+                game_info = job['game_info']
+                
+                print(f"\n=== Processing {collection_type.upper()} ===")
+                print(f"🏆 {game_info['league']}: {game_info['home_team']} vs {game_info['away_team']}")
+                print(f"⏰ Kickoff: {game_info['kickoff_utc']}")
+                print(f"🎯 Priority: {game_info['priority']}")
+                
+                collected_data = {
+                    'fixture_id': fixture_id,
+                    'collection_type': collection_type,
+                    'game_info': game_info,
+                    'collected_at': datetime.now().isoformat(),
+                    'data': {}
+                }
+                
+                api_football_headers = {
+                    'X-RapidAPI-Key': os.getenv('API_FOOTBALL_KEY'),
+                    'X-RapidAPI-Host': 'api-football-v1.p.rapidapi.com'
+                }
+                
+                success = False
+                
+                if collection_type == 'early_odds':
+                    success = collect_early_odds(collected_data, api_football_headers)
+                elif collection_type == 'pre_match':
+                    success = collect_pre_match_data(collected_data, api_football_headers)
+                elif collection_type == 'team_news':
+                    success = collect_team_news(collected_data, api_football_headers)
+                elif collection_type == 'final_data':
+                    success = collect_final_data(collected_data, api_football_headers)
+                
+                if success:
+                    # Save to JSON (backup)
+                    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+                    filename = f"data/{collection_type}_{fixture_id}_{timestamp}.json"
+                    os.makedirs('data', exist_ok=True)
+                    
+                    with open(filename, 'w') as f:
+                        json.dump(collected_data, f, indent=2)
+                    
+                    # Save to Database
+                    db_success = store_fixture_data(collected_data, collection_type)
+                    if db_success:
+                        print(f"✅ Stored in database")
+                    else:
+                        print(f"⚠️ Database storage failed")
+                    
+                    print(f"✅ {collection_type} completed successfully")
+                    return True
+                else:
+                    print(f"❌ {collection_type} failed")
+                    return False
+                    
+            except Exception as e:
+                print(f"❌ Error in collect_game_data: {e}")
+                return False
+        
+        def collect_early_odds(data, headers):
+            """Frühe Quoten und Basis-Informationen"""
+            try:
+                fixture_id = data['fixture_id']
+                
+                # Fixture Details
+                fixture_url = f"https://api-football-v1.p.rapidapi.com/v3/fixtures"
+                fixture_params = {'id': fixture_id}
+                
+                response = requests.get(fixture_url, headers=headers, params=fixture_params, timeout=15)
+                if response.status_code == 200:
+                    data['data']['fixture_details'] = response.json()
+                    print("  ✅ Fixture details collected")
+                
+                # Odds API Integration
+                collect_odds_data(data, 'early')
+                return True
+                
+            except Exception as e:
+                print(f"  ❌ Early odds error: {e}")
+                return False
+        
+        def collect_pre_match_data(data, headers):
+            """Pre-Match ausführliche Analyse"""
+            try:
+                game_info = data['game_info']
+                
+                # Team Statistics
+                for team_id, team_type in [(game_info['home_team_id'], 'home'), (game_info['away_team_id'], 'away')]:
+                    stats_url = f"https://api-football-v1.p.rapidapi.com/v3/teams/statistics"
+                    current_season = datetime.now().year if datetime.now().month >= 8 else datetime.now().year - 1
+                    
+                    stats_params = {
+                        'league': game_info['league_id'],
+                        'season': current_season,
+                        'team': team_id
+                    }
+                    
+                    response = requests.get(stats_url, headers=headers, params=stats_params, timeout=15)
+                    if response.status_code == 200:
+                        data['data'][f'{team_type}_team_stats'] = response.json()
+                        print(f"  ✅ {team_type.title()} team stats collected")
+                
+                # Head-to-Head
+                h2h_url = f"https://api-football-v1.p.rapidapi.com/v3/fixtures/headtohead"
+                h2h_params = {
+                    'h2h': f"{game_info['home_team_id']}-{game_info['away_team_id']}",
+                    'last': 10
+                }
+                
+                response = requests.get(h2h_url, headers=headers, params=h2h_params, timeout=15)
+                if response.status_code == 200:
+                    data['data']['head_to_head'] = response.json()
+                    print("  ✅ Head-to-head collected")
+                
+                collect_odds_data(data, 'pre_match')
+                return True
+                
+            except Exception as e:
+                print(f"  ❌ Pre-match error: {e}")
+                return False
+        
+        def collect_team_news(data, headers):
+            """Team-News, Verletzungen, Form"""
+            try:
+                collect_odds_data(data, 'team_news')
+                print("  ✅ Team news phase completed")
+                return True
+                
+            except Exception as e:
+                print(f"  ❌ Team news error: {e}")
+                return False
+        
+        def collect_final_data(data, headers):
+            """Finale Daten: Aufstellungen, letzte Quoten"""
+            try:
+                fixture_id = data['fixture_id']
+                
+                # Lineups
+                lineups_url = f"https://api-football-v1.p.rapidapi.com/v3/fixtures/lineups"
+                lineups_params = {'fixture': fixture_id}
+                
+                response = requests.get(lineups_url, headers=headers, params=lineups_params, timeout=15)
+                if response.status_code == 200:
+                    lineups_data = response.json()
+                    if lineups_data.get('response'):
+                        data['data']['lineups'] = lineups_data
+                        print("  ✅ Lineups collected")
+                    else:
+                        print("  ⚠️ Lineups not yet available")
+                
+                collect_odds_data(data, 'final')
+                return True
+                
+            except Exception as e:
+                print(f"  ❌ Final data error: {e}")
+                return False
+        
+        def collect_odds_data(data, phase):
+            """Quoten von The Odds API sammeln"""
+            try:
+                odds_api_key = os.getenv('ODDS_API_KEY')
+                if not odds_api_key:
+                    print("  ⚠️ No Odds API key configured")
+                    return
+                
+                game_info = data['game_info']
+                league_name = game_info['league']
+                
+                odds_sports_map = {
+                    'Premier League': 'soccer_epl',
+                    'La Liga': 'soccer_spain_la_liga',
+                    'Bundesliga': 'soccer_germany_bundesliga',
+                    'Serie A': 'soccer_italy_serie_a',
+                    'Ligue 1': 'soccer_france_ligue_one',
+                    'Champions League': 'soccer_uefa_champs_league',
+                    'Europa League': 'soccer_uefa_europa_league',
+                    'Copa Libertadores': 'soccer_conmebol_copa_libertadores',
+                    'Brasileirão Serie A': 'soccer_brazil_campeonato',
+                    'Liga Profesional Argentina': 'soccer_argentina_primera_division'
+                }
+                
+                sport = odds_sports_map.get(league_name)
+                if not sport:
+                    print(f"  ⚠️ No odds mapping for {league_name}")
+                    return
+                
+                odds_url = f"https://api.the-odds-api.com/v4/sports/{sport}/odds/"
+                odds_params = {
+                    'apiKey': odds_api_key,
+                    'regions': 'eu,us',
+                    'markets': 'h2h,spreads,totals',
+                    'oddsFormat': 'decimal',
+                    'dateFormat': 'iso'
+                }
+                
+                response = requests.get(odds_url, params=odds_params, timeout=15)
+                if response.status_code == 200:
+                    odds_data = response.json()
+                    
+                    home_team = game_info['home_team'].lower()
+                    away_team = game_info['away_team'].lower()
+                    
+                    matching_game = None
+                    for game in odds_data:
+                        game_home = game.get('home_team', '').lower()
+                        game_away = game.get('away_team', '').lower()
+                        
+                        if (home_team in game_home or game_home in home_team or 
+                            any(word in game_home for word in home_team.split() if len(word) > 3)) and \
+                           (away_team in game_away or game_away in away_team or 
+                            any(word in game_away for word in away_team.split() if len(word) > 3)):
+                            matching_game = game
+                            break
+                    
+                    if matching_game:
+                        data['data'][f'odds_{phase}'] = matching_game
+                        print(f"  ✅ Odds collected for {phase}")
+                    else:
+                        print(f"  ⚠️ No matching game in odds data")
+                        
+                elif response.status_code == 429:
+                    print(f"  ⚠️ Odds API rate limited")
+                else:
+                    print(f"  ⚠️ Odds API error: {response.status_code}")
+                    
+            except Exception as e:
+                print(f"  ⚠️ Odds collection error: {e}")
+        
+        # Job Processing Hauptlogik
+        try:
+            with open('jobs.json', 'r') as f:
+                jobs = json.load(f)
+        except FileNotFoundError:
+            print("❌ No jobs file found")
+            exit(0)
+        
+        now = datetime.now(pytz.UTC)
+        processed_jobs = []
+        expired_jobs = []
+        
+        print(f"🔍 Checking {len(jobs)} jobs at {now}")
+        
+        # Priorisierte Job-Verarbeitung
+        pending_jobs = [job for job in jobs if job['status'] == 'pending']
+        pending_jobs.sort(key=lambda x: (x.get('priority', 'medium'), x['scheduled_for']))
+        
+        processed_count = 0
+        max_processing = 5  # Limit für API-Schonung
+        
+        for job in pending_jobs:
+            if processed_count >= max_processing:
+                print(f"⚠️ Processing limit reached ({max_processing})")
+                break
+                
+            scheduled_time = datetime.fromisoformat(job['scheduled_for'].replace('Z', '+00:00'))
+            
+            # Job bereit?
+            if scheduled_time <= now <= scheduled_time + timedelta(minutes=45):
+                print(f"\n🚀 Processing job {job['id']}")
+                success = collect_game_data(job)
+                
+                job['status'] = 'completed' if success else 'failed'
+                job['processed_at'] = now.isoformat()
+                if not success:
+                    job['error_reason'] = 'Collection failed'
+                
+                processed_jobs.append(job['id'])
+                processed_count += 1
+                
+            elif now > scheduled_time + timedelta(minutes=45):
+                # Job zu spät
+                job['status'] = 'expired'
+                job['processed_at'] = now.isoformat()
+                job['error_reason'] = 'Expired (too late)'
+                expired_jobs.append(job['id'])
+        
+        # Aktualisiere jobs.json
+        if processed_jobs or expired_jobs:
+            with open('jobs.json', 'w') as f:
+                json.dump(jobs, f, indent=2)
+            
+            print(f"\n📊 Processing Summary:")
+            print(f"✅ Completed: {len(processed_jobs)}")
+            print(f"⏰ Expired: {len(expired_jobs)}")
+            
+            # Discord Success Notification
+            webhook_url = os.getenv('DISCORD_WEBHOOK_URL')
+            if webhook_url and processed_jobs:
+                embed = {
+                    "title": "✅ Data Collection Complete",
+                    "description": f"Successfully processed {len(processed_jobs)} jobs",
+                    "fields": [
+                        {
+                            "name": "Jobs Completed",
+                            "value": "\n".join(processed_jobs[:5]),
+                            "inline": True
+                        }
+                    ],
+                    "timestamp": datetime.now().isoformat()
+                }
+                
+                try:
+                    requests.post(webhook_url, json={"embeds": [embed]})
+                except:
+                    pass
+        else:
+            print("ℹ️ No jobs ready for processing")
+        EOF
+                    "fields": [
+                        {
+                            "name": "Jobs Completed",
+                            "value": "\n".join(processed_jobs[:5]),
+                            "inline": True
+                        }
+                    ],
+                    "timestamp": datetime.now().isoformat()
+                }
+                
+                try:
+                    requests.post(webhook_url, json={"embeds": [embed]})
+                except:
+                    pass
+        else:
+            print("ℹ️ No jobs ready for processing")
+        EOF
+      env:
+        API_FOOTBALL_KEY: ${{ secrets.API_FOOTBALL_KEY }}
+        ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
+        DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        
+    - name: Commit Results
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        git add .
+        git commit -m "📊 Process data collection jobs" || exit 0
+        git push
+
+  daily-maintenance:
+    if: contains(github.event.schedule, '0 8 * * *')
+    runs-on: ubuntu-latest
+    needs: [create-jobs]
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+        
+    - name: Database Maintenance
+      run: |
+        python << 'EOF'
+        import sqlite3
+        import os
+        from datetime import datetime, timedelta
+        
+        if os.path.exists('data/football_data.db'):
+            conn = sqlite3.connect('data/football_data.db')
+            
+            # Cleanup alte Daten (älter als 6 Monate)
+            cutoff_date = datetime.now() - timedelta(days=180)
+            
+            # Bereinige odds_history
+            cursor = conn.execute("""
+                DELETE FROM odds_history 
+                WHERE collected_at < ?
+            """, (cutoff_date,))
+            deleted_odds = cursor.rowcount
+            
+            # Bereinige team_events
+            cursor = conn.execute("""
+                DELETE FROM team_events 
+                WHERE detected_at < ? AND end_date < ?
+            """, (cutoff_date, datetime.now().date()))
+            deleted_events = cursor.rowcount
+            
+            # Vacuum für bessere Performance
+            conn.execute("VACUUM")
+            
+            # Statistiken
+            cursor = conn.execute("SELECT COUNT(*) FROM odds_history")
+            odds_count = cursor.fetchone()[0]
+            
+            cursor = conn.execute("SELECT COUNT(*) FROM fixtures")
+            fixtures_count = cursor.fetchone()[0]
+            
+            cursor = conn.execute("SELECT COUNT(*) FROM teams")
+            teams_count = cursor.fetchone()[0]
+            
+            conn.commit()
+            conn.close()
+            
+            print(f"🧹 Database maintenance completed")
+            print(f"🗑️ Deleted: {deleted_odds} old odds, {deleted_events} old events")
+            print(f"📊 Current: {odds_count} odds, {fixtures_count} fixtures, {teams_count} teams")
+        else:
+            print("⚠️ Database not found")
+        EOF
+    
+    - name: Generate Weekly Report
+      run: |
+        python << 'EOF'
+        import json
+        import sqlite3
+        import os
+        from datetime import datetime, timedelta
+        
+        if os.path.exists('data/football_data.db'):
+            conn = sqlite3.connect('data/football_data.db')
+            conn.row_factory = sqlite3.Row
+            
+            # Weekly Report
+            week_ago = datetime.now() - timedelta(days=7)
+            
+            # Odds collected last week
+            cursor = conn.execute("""
+                SELECT COUNT(*) as count FROM odds_history 
+                WHERE collected_at >= ?
+            """, (week_ago,))
+            weekly_odds = cursor.fetchone()[0]
+            
+            # Games with data
+            cursor = conn.execute("""
+                SELECT COUNT(DISTINCT fixture_id) as count FROM odds_history 
+                WHERE collected_at >= ?
+            """, (week_ago,))
+            weekly_games = cursor.fetchone()[0]
+            
+            # Top leagues by activity
+            cursor = conn.execute("""
+                SELECT l.name, COUNT(DISTINCT oh.fixture_id) as games
+                FROM odds_history oh
+                JOIN fixtures f ON oh.fixture_id = f.id
+                JOIN leagues l ON f.league_id = l.id
+                WHERE oh.collected_at >= ?
+                GROUP BY l.id, l.name
+                ORDER BY games DESC
+                LIMIT 5
+            """, (week_ago,))
+            top_leagues = cursor.fetchall()
+            
+            # Bookmaker distribution
+            cursor = conn.execute("""
+                SELECT bookmaker, COUNT(*) as records
+                FROM odds_history
+                WHERE collected_at >= ?
+                GROUP BY bookmaker
+                ORDER BY records DESC
+                LIMIT 10
+            """, (week_ago,))
+            bookmakers = cursor.fetchall()
+            
+            # Collection phases
+            cursor = conn.execute("""
+                SELECT collection_phase, COUNT(*) as records
+                FROM odds_history
+                WHERE collected_at >= ?
+                GROUP BY collection_phase
+                ORDER BY records DESC
+            """, (week_ago,))
+            phases = cursor.fetchall()
+            
+            report = {
+                'report_date': datetime.now().isoformat(),
+                'period': 'last_7_days',
+                'summary': {
+                    'odds_collected': weekly_odds,
+                    'games_tracked': weekly_games,
+                    'top_leagues': [{'name': row[0], 'games': row[1]} for row in top_leagues],
+                    'bookmakers': [{'name': row[0], 'records': row[1]} for row in bookmakers],
+                    'collection_phases': [{'phase': row[0], 'records': row[1]} for row in phases]
+                }
+            }
+            
+            with open('data/weekly_report.json', 'w') as f:
+                json.dump(report, f, indent=2)
+            
+            print(f"📋 Weekly Report Generated:")
+            print(f"   📊 {weekly_odds} odds records collected")
+            print(f"   ⚽ {weekly_games} games tracked")
+            if top_leagues:
+                print(f"   🏆 Top league: {top_leagues[0][0]} ({top_leagues[0][1]} games)")
+            
+            # Discord Weekly Report
+            webhook_url = os.getenv('DISCORD_WEBHOOK_URL')
+            if webhook_url:
+                embed = {
+                    "title": "📋 Weekly Football Data Report",
+                    "description": f"Data collection summary for the last 7 days",
+                    "color": 0x0099ff,
+                    "fields": [
+                        {
+                            "name": "📊 Data Collected",
+                            "value": f"**{weekly_odds:,}** odds records\n**{weekly_games}** games tracked",
+                            "inline": True
+                        },
+                        {
+                            "name": "🏆 Top Leagues",
+                            "value": "\n".join([f"• {league['name']}: {league['games']} games" for league in report['summary']['top_leagues'][:3]]),
+                            "inline": True
+                        },
+                        {
+                            "name": "📈 Collection Phases",
+                            "value": "\n".join([f"• {phase['phase']}: {phase['records']}" for phase in report['summary']['collection_phases']]),
+                            "inline": False
+                        }
+                    ],
+                    "timestamp": datetime.now().isoformat(),
+                    "footer": {
+                        "text": "Football Data Pipeline • Weekly Report"
+                    }
+                }
+                
+                try:
+                    requests.post(webhook_url, json={"embeds": [embed]})
+                    print("✅ Weekly report sent to Discord")
+                except Exception as e:
+                    print(f"⚠️ Discord report failed: {e}")
+            
+            conn.close()
+        else:
+            print("⚠️ Database not found for reporting")
+        EOF
+      env:
+        DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+
+    - name: Generate Dashboard Data
+      run: |
+        python << 'EOF'
+        import sqlite3
+        import json
+        import os
+        from datetime import datetime, timedelta
+        
+        if os.path.exists('data/football_data.db'):
+            conn = sqlite3.connect('data/football_data.db')
+            conn.row_factory = sqlite3.Row
+            
+            dashboard_data = {}
+            
+            # Upcoming games with latest odds
+            upcoming = conn.execute("""
+                SELECT f.id, f.kickoff_utc, ht.name as home_team, at.name as away_team,
+                       l.name as league, l.country,
+                       oh.home_odds, oh.draw_odds, oh.away_odds, oh.bookmaker,
+                       oh.collected_at
+                FROM fixtures f
+                JOIN teams ht ON f.home_team_id = ht.id
+                JOIN teams at ON f.away_team_id = at.id  
+                JOIN leagues l ON f.league_id = l.id
+                LEFT JOIN (
+                    SELECT fixture_id, home_odds, draw_odds, away_odds, bookmaker, collected_at,
+                           ROW_NUMBER() OVER (PARTITION BY fixture_id ORDER BY collected_at DESC) as rn
+                    FROM odds_history WHERE market_type = 'h2h'
+                ) oh ON f.id = oh.fixture_id AND oh.rn = 1
+                WHERE f.kickoff_utc > datetime('now')
+                AND f.kickoff_utc < datetime('now', '+48 hours')
+                ORDER BY f.kickoff_utc
+                LIMIT 20
+            """).fetchall()
+            
+            dashboard_data['upcoming_games'] = [dict(row) for row in upcoming]
+            
+            # Recent odds movements
+            movements = conn.execute("""
+                WITH recent_odds AS (
+                    SELECT fixture_id, home_odds, away_odds, collected_at, bookmaker,
+                           LAG(home_odds) OVER (PARTITION BY fixture_id, bookmaker ORDER BY collected_at) as prev_home,
+                           LAG(away_odds) OVER (PARTITION BY fixture_id, bookmaker ORDER BY collected_at) as prev_away
+                    FROM odds_history 
+                    WHERE collected_at >= datetime('now', '-24 hours')
+                    AND market_type = 'h2h'
+                )
+                SELECT r.*, f.kickoff_utc, ht.name as home_team, at.name as away_team
+                FROM recent_odds r
+                JOIN fixtures f ON r.fixture_id = f.id
+                JOIN teams ht ON f.home_team_id = ht.id
+                JOIN teams at ON f.away_team_id = at.id
+                WHERE prev_home IS NOT NULL
+                AND (ABS(home_odds - prev_home) / prev_home > 0.1 
+                     OR ABS(away_odds - prev_away) / prev_away > 0.1)
+                ORDER BY r.collected_at DESC
+                LIMIT 10
+            """).fetchall()
+            
+            dashboard_data['odds_movements'] = [dict(row) for row in movements]
+            
+            # League statistics
+            league_stats = conn.execute("""
+                SELECT l.name, l.country, COUNT(DISTINCT f.id) as total_games,
+                       COUNT(DISTINCT oh.id) as odds_records
+                FROM leagues l
+                LEFT JOIN fixtures f ON l.id = f.league_id  
+                LEFT JOIN odds_history oh ON f.id = oh.fixture_id
+                WHERE f.kickoff_utc >= datetime('now', '-30 days')
+                GROUP BY l.id, l.name, l.country
+                ORDER BY total_games DESC
+            """).fetchall()
+            
+            dashboard_data['league_stats'] = [dict(row) for row in league_stats]
+            
+            # Team performance
+            team_performance = conn.execute("""
+                SELECT t.name, ts.win_percentage, ts.goals_for, ts.goals_against,
+                       ts.matches_played, l.name as league
+                FROM team_statistics ts
+                JOIN teams t ON ts.team_id = t.id
+                JOIN leagues l ON ts.league_id = l.id
+                WHERE ts.collection_date >= date('now', '-7 days')
+                AND ts.matches_played >= 5
+                ORDER BY ts.win_percentage DESC
+                LIMIT 20
+            """).fetchall()
+            
+            dashboard_data['top_teams'] = [dict(row) for row in team_performance]
+            
+            # Meta information
+            dashboard_data['last_updated'] = datetime.now().isoformat()
+            dashboard_data['stats'] = {
+                'total_fixtures': conn.execute("SELECT COUNT(*) FROM fixtures").fetchone()[0],
+                'total_odds_records': conn.execute("SELECT COUNT(*) FROM odds_history").fetchone()[0],
+                'active_leagues': len(dashboard_data['league_stats'])
+            }
+            
+            # Save dashboard data
+            with open('data/dashboard_data.json', 'w') as f:
+                json.dump(dashboard_data, f, indent=2)
+            
+            print(f"📊 Dashboard data generated with {len(dashboard_data['upcoming_games'])} games")
+            conn.close()
+        else:
+            print("⚠️ Database not found for dashboard")
+        EOF
+
+    - name: API Usage Analytics
+      run: |
+        python << 'EOF'
+        import json
+        import sqlite3
+        import os
+        from datetime import datetime, timedelta
+        
+        if os.path.exists('data/football_data.db'):
+            conn = sqlite3.connect('data/football_data.db')
+            conn.row_factory = sqlite3.Row
+            
+            # Berechne API-Usage für die letzten 24h
+            yesterday = datetime.now() - timedelta(days=1)
+            
+            # Anzahl der API-Calls schätzen basierend auf Jobs
+            try:
+                with open('jobs.json', 'r') as f:
+                    jobs = json.load(f)
+                
+                completed_jobs = [job for job in jobs if job['status'] == 'completed' and 
+                                job['processed_at'] >= yesterday.isoformat()]
+                
+                # Schätze API-Calls pro Job-Typ
+                api_usage = {
+                    'early_odds': 2,     # Fixture details + Odds API
+                    'pre_match': 4,      # + Team stats + H2H
+                    'team_news': 1,      # Nur Odds API
+                    'final_data': 2      # Lineups + Odds API
+                }
+                
+                total_api_calls = sum(api_usage.get(job['type'], 1) for job in completed_jobs)
+                
+                # API-Football Calls (max 100/Tag im Free Plan)
+                api_football_calls = sum(
+                    3 if job['type'] in ['pre_match', 'final_data'] else 1 
+                    for job in completed_jobs
+                )
+                
+                # Odds API Calls (max 500/Monat im Free Plan)
+                odds_api_calls = len(completed_jobs)  # 1 Call pro Job
+                
+                usage_report = {
+                    'date': datetime.now().date().isoformat(),
+                    'completed_jobs': len(completed_jobs),
+                    'estimated_total_calls': total_api_calls,
+                    'api_football_calls': api_football_calls,
+                    'odds_api_calls': odds_api_calls,
+                    'api_football_remaining': max(0, 100 - api_football_calls),
+                    'usage_status': 'green' if api_football_calls < 80 else 'yellow' if api_football_calls < 95 else 'red'
+                }
+                
+                print(f"📊 API Usage Report:")
+                print(f"   📞 Total API Calls: {total_api_calls}")
+                print(f"   🏈 API-Football: {api_football_calls}/100 ({usage_report['api_football_remaining']} remaining)")
+                print(f"   💰 Odds API: {odds_api_calls}/500")
+                print(f"   ✅ Completed Jobs: {len(completed_jobs)}")
+                
+                with open('data/api_usage.json', 'w') as f:
+                    json.dump(usage_report, f, indent=2)
+                
+                # Warning bei hoher API-Usage
+                if usage_report['usage_status'] in ['yellow', 'red']:
+                    webhook_url = os.getenv('DISCORD_WEBHOOK_URL')
+                    if webhook_url:
+                        color = 0xffaa00 if usage_report['usage_status'] == 'yellow' else 0xff0000
+                        embed = {
+                            "title": "⚠️ High API Usage Warning",
+                            "description": f"API-Football usage: {api_football_calls}/100 daily limit",
+                            "color": color,
+                            "fields": [
+                                {
+                                    "name": "Current Usage",
+                                    "value": f"**API-Football**: {api_football_calls}/100\n**Odds API**: {odds_api_calls}/500",
+                                    "inline": True
+                                },
+                                {
+                                    "name": "Recommendation", 
+                                    "value": "Consider reducing league coverage or collection frequency",
+                                    "inline": True
+                                }
+                            ],
+                            "timestamp": datetime.now().isoformat()
+                        }
+                        
+                        try:
+                            import requests
+                            requests.post(webhook_url, json={"embeds": [embed]})
+                        except:
+                            pass
+                            
+            except Exception as e:
+                print(f"⚠️ API usage calculation failed: {e}")
+        
+        else:
+            print("⚠️ Database not found for API usage analytics")
+        EOF
+      env:
+        DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+
+    - name: Commit Reports
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        git add data/
+        git commit -m "📋 Generate weekly reports and dashboard data" || exit 0
+        git push
+
+  error-notification:
+    if: failure()
+    needs: [create-jobs, process-jobs, daily-maintenance]
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Notify Discord on Failure
+      run: |
+        webhook_url="${{ secrets.DISCORD_WEBHOOK_URL }}"
+        if [ ! -z "$webhook_url" ]; then
+          curl -H "Content-Type: application/json" -X POST -d '{
+            "embeds": [{
+              "title": "❌ Pipeline Error",
+              "description": "Football data collection pipeline encountered an error",
+              "color": 16711680,
+              "fields": [
+                {
+                  "name": "Repository",
+                  "value": "${{ github.repository }}",
+                  "inline": true
+                },
+                {
+                  "name": "Workflow",
+                  "value": "${{ github.workflow }}",
+                  "inline": true
+                },
+                {
+                  "name": "Run ID",
+                  "value": "[#${{ github.run_number }}](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})",
+                  "inline": true
+                },
+                {
+                  "name": "Job Failed",
+                  "value": "${{ github.job }}",
+                  "inline": true
+                },
+                {
+                  "name": "Timestamp",
+                  "value": "'$(date -u +%Y-%m-%dT%H:%M:%S.000Z)'",
+                  "inline": true
+                }
+              ],
+              "footer": {
+                "text": "Check GitHub Actions for detailed error logs"
+              }
+            }]
+          }' "$webhook_url"
+        fi
+
+  health-check:
+    runs-on: ubuntu-latest
+    needs: [process-jobs]
+    if: always()
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Pipeline Health Check
+      run: |
+        python << 'EOF'
+        import json
+        import os
+        from datetime import datetime, timedelta
+        
+        health_status = {
+            'timestamp': datetime.now().isoformat(),
+            'pipeline_status': 'healthy',
+            'issues': [],
+            'recommendations': []
+        }
+        
+        # Check jobs.json
+        try:
+            with open('jobs.json', 'r') as f:
+                jobs = json.load(f)
+            
+            pending_jobs = [j for j in jobs if j['status'] == 'pending']
+            failed_jobs = [j for j in jobs if j['status'] == 'failed']
+            expired_jobs = [j for j in jobs if j['status'] == 'expired']
+            completed_jobs = [j for j in jobs if j['status'] == 'completed']
+            
+            # Health indicators
+            if len(failed_jobs) > len(completed_jobs) * 0.2:  # >20% failure rate
+                health_status['issues'].append('High job failure rate')
+                health_status['pipeline_status'] = 'degraded'
+            
+            if len(expired_jobs) > 10:
+                health_status['issues'].append('Many expired jobs - possible scheduling issues')
+                health_status['recommendations'].append('Check API rate limits and processing capacity')
+            
+            if len(pending_jobs) > 50:
+                health_status['issues'].append('Large job backlog')
+                health_status['recommendations'].append('Consider increasing processing frequency')
+            
+            # Check recent activity (last 24h)
+            yesterday = datetime.now() - timedelta(hours=24)
+            recent_jobs = [j for j in jobs if j.get('processed_at', '1970-01-01') >= yesterday.isoformat()]
+            
+            if len(recent_jobs) == 0:
+                health_status['issues'].append('No recent job activity')
+                health_status['pipeline_status'] = 'unhealthy'
+            
+        except FileNotFoundError:
+            health_status['issues'].append('jobs.json not found')
+            health_status['pipeline_status'] = 'unhealthy'
+        except Exception as e:
+            health_status['issues'].append(f'Job analysis failed: {e}')
+        
+        # Check database
+        if os.path.exists('data/football_data.db'):
+            try:
+                import sqlite3
+                conn = sqlite3.connect('data/football_data.db')
+                
+                # Check recent data
+                cursor = conn.execute("SELECT COUNT(*) FROM odds_history WHERE collected_at >= datetime('now', '-24 hours')")
+                recent_odds = cursor.fetchone()[0]
+                
+                cursor = conn.execute("SELECT COUNT(*) FROM fixtures WHERE kickoff_utc > datetime('now')")
+                future_fixtures = cursor.fetchone()[0]
+                
+                if recent_odds == 0:
+                    health_status['issues'].append('No recent odds data collected')
+                
+                if future_fixtures == 0:
+                    health_status['issues'].append('No upcoming fixtures found')
+                
+                conn.close()
+                
+            except Exception as e:
+                health_status['issues'].append(f'Database check failed: {e}')
+        else:
+            health_status['issues'].append('Database not found')
+            health_status['pipeline_status'] = 'unhealthy'
+        
+        # Set overall status
+        if len(health_status['issues']) > 3:
+            health_status['pipeline_status'] = 'unhealthy'
+        elif len(health_status['issues']) > 0:
+            health_status['pipeline_status'] = 'degraded'
+        
+        # Save health report
+        with open('data/health_status.json', 'w') as f:
+            json.dump(health_status, f, indent=2)
+        
+        print(f"🏥 Pipeline Health Check Complete")
+        print(f"   Status: {health_status['pipeline_status'].upper()}")
+        print(f"   Issues: {len(health_status['issues'])}")
+        
+        for issue in health_status['issues']:
+            print(f"   ⚠️ {issue}")
+        
+        # Discord notification für unhealthy status
+        if health_status['pipeline_status'] == 'unhealthy':
+            webhook_url = os.getenv('DISCORD_WEBHOOK_URL')
+            if webhook_url:
+                embed = {
+                    "title": "🚨 Pipeline Health Alert",
+                    "description": f"Pipeline status: **{health_status['pipeline_status'].upper()}**",
+                    "color": 0xff0000,
+                    "fields": [
+                        {
+                            "name": "Issues Detected",
+                            "value": "\n".join([f"• {issue}" for issue in health_status['issues'][:5]]),
+                            "inline": False
+                        }
+                    ],
+                    "timestamp": health_status['timestamp']
+                }
+                
+                if health_status['recommendations']:
+                    embed['fields'].append({
+                        "name": "Recommendations",
+                        "value": "\n".join([f"• {rec}" for rec in health_status['recommendations'][:3]]),
+                        "inline": False
+                    })
+                
+                try:
+                    import requests
+                    requests.post(webhook_url, json={"embeds": [embed]})
+                except:
+                    pass
+        
+        # Exit with error code if unhealthy
+        if health_status['pipeline_status'] == 'unhealthy':
+            exit(1)
+        EOF
+      env:
+        DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        
+    - name: Commit Health Status
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        git add data/health_status.json
+        git commit -m "🏥 Update pipeline health status" || exit 0
+        git push
+                    "fields": [
+                        {
+                            "name": "Jobs Completed",
+                            "value": "\n".join(processed_jobs[:5]),
+                            "inline": True
+                        }
+                    ],
+                    "timestamp": datetime.now().isoformat()
+                }
+                
+                try:
+                    requests.post(webhook_url, json={"embeds": [embed]})
+                except:
+                    pass
+        else:
+            print("ℹ️ No jobs ready for processing")
+        EOF
+      env:
+        API_FOOTBALL_KEY: ${{ secrets.API_FOOTBALL_KEY }}
+        ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
+        DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        
+    - name: Commit Results
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        git add .
+        git commit -m "📊 Process data collection jobs" || exit 0
+        git push
+
+  daily-maintenance:
+    if: contains(github.event.schedule, '0 8 * * *')
+    runs-on: ubuntu-latest
+    needs: [create-jobs]
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+        
+    - name: Database Maintenance
+      run: |
+        python << 'EOF'
+        import sqlite3
+        import os
+        from datetime import datetime, timedelta
+        
+        if os.path.exists('data/football_data.db'):
+            conn = sqlite3.connect('data/football_data.db')
+            
+            # Cleanup alte Daten (älter als 6 Monate)
+            cutoff_date = datetime.now() - timedelta(days=180)
+            
+            # Bereinige odds_history
+            cursor = conn.execute("""
+                DELETE FROM odds_history 
+                WHERE collected_at < ?
+            """, (cutoff_date,))
+            deleted_odds = cursor.rowcount
+            
+            # Bereinige team_events
+            cursor = conn.execute("""
+                DELETE FROM team_events 
+                WHERE detected_at < ? AND end_date < ?
+            """, (cutoff_date, datetime.now().date()))
+            deleted_events = cursor.rowcount
+            
+            # Vacuum für bessere Performance
+            conn.execute("VACUUM")
+            
+            # Statistiken
+            cursor = conn.execute("SELECT COUNT(*) FROM odds_history")
+            odds_count = cursor.fetchone()[0]
+            
+            cursor = conn.execute("SELECT COUNT(*) FROM fixtures")
+            fixtures_count = cursor.fetchone()[0]
+            
+            cursor = conn.execute("SELECT COUNT(*) FROM teams")
+            teams_count = cursor.fetchone()[0]
+            
+            conn.commit()
+            conn.close()
+            
+            print(f"🧹 Database maintenance completed")
+            print(f"🗑️ Deleted: {deleted_odds} old odds, {deleted_events} old events")
+            print(f"📊 Current: {odds_count} odds, {fixtures_count} fixtures, {teams_count} teams")
+        else:
+            print("⚠️ Database not found")
+        EOF
+    
+    - name: Generate Weekly Report
+      run: |
+        python << 'EOF'
+        import json
+        import sqlite3
+        import os
+        from datetime import datetime, timedelta
+        
+        if os.path.exists('data/football_data.db'):
+            conn = sqlite3.connect('data/football_data.db')
+            conn.row_factory = sqlite3.Row
+            
+            # Weekly Report
+            week_ago = datetime.now() - timedelta(days=7)
+            
+            # Odds collected last week
+            cursor = conn.execute("""
+                SELECT COUNT(*) as count FROM odds_history 
+                WHERE collected_at >= ?
+            """, (week_ago,))
+            weekly_odds = cursor.fetchone()[0]
+            
+            # Games with data
+            cursor = conn.execute("""
+                SELECT COUNT(DISTINCT fixture_id) as count FROM odds_history 
+                WHERE collected_at >= ?
+            """, (week_ago,))
+            weekly_games = cursor.fetchone()[0]
+            
+            # Top leagues by activity
+            cursor = conn.execute("""
+                SELECT l.name, COUNT(DISTINCT oh.fixture_id) as games
+                FROM odds_history oh
+                JOIN fixtures f ON oh.fixture_id = f.id
+                JOIN leagues l ON f.league_id = l.id
+                WHERE oh.collected_at >= ?
+                GROUP BY l.id, l.name
+                ORDER BY games DESC
+                LIMIT 5
+            """, (week_ago,))
+            top_leagues = cursor.fetchall()
+            
+            # Bookmaker distribution
+            cursor = conn.execute("""
+                SELECT bookmaker, COUNT(*) as records
+                FROM odds_history
+                WHERE collected_at >= ?
+                GROUP BY bookmaker
+                ORDER BY records DESC
+                LIMIT 10
+            """, (week_ago,))
+            bookmakers = cursor.fetchall()
+            
+            # Collection phases
+            cursor = conn.execute("""
+                SELECT collection_phase, COUNT(*) as records
+                FROM odds_history
+                WHERE collected_at >= ?
+                GROUP BY collection_phase
+                ORDER BY records DESC
+            """, (week_ago,))
+            phases = cursor.fetchall()
+            
+            report = {
+                'report_date': datetime.now().isoformat(),
+                'period': 'last_7_days',
+                'summary': {
+                    'odds_collected': weekly_odds,
+                    'games_tracked': weekly_games,
+                    'top_leagues': [{'name': row[0], 'games': row[1]} for row in top_leagues],
+                    'bookmakers': [{'name': row[0], 'records': row[1]} for row in bookmakers],
+                    'collection_phases': [{'phase': row[0], 'records': row[1]} for row in phases]
+                }
+            }
+            
+            with open('data/weekly_report.json', 'w') as f:
+                json.dump(report, f, indent=2)
+            
+            print(f"📋 Weekly Report Generated:")
+            print(f"   📊 {weekly_odds} odds records collected")
+            print(f"   ⚽ {weekly_games} games tracked")
+            if top_leagues:
+                print(f"   🏆 Top league: {top_leagues[0][0]} ({top_leagues[0][1]} games)")
+            
+            # Discord Weekly Report
+            webhook_url = os.getenv('DISCORD_WEBHOOK_URL')
+            if webhook_url:
+                embed = {
+                    "title": "📋 Weekly Football Data Report",
+                    "description": f"Data collection summary for the last 7 days",
+                    "color": 0x0099ff,
+                    "fields": [
+                        {
+                            "name": "📊 Data Collected",
+                            "value": f"**{weekly_odds:,}** odds records\n**{weekly_games}** games tracked",
+                            "inline": True
+                        },
+                        {
+                            "name": "🏆 Top Leagues",
+                            "value": "\n".join([f"• {league['name']}: {league['games']} games" for league in report['summary']['top_leagues'][:3]]),
+                            "inline": True
+                        },
+                        {
+                            "name": "📈 Collection Phases",
+                            "value": "\n".join([f"• {phase['phase']}: {phase['records']}" for phase in report['summary']['collection_phases']]),
+                            "inline": False
+                        }
+                    ],
+                    "timestamp": datetime.now().isoformat(),
+                    "footer": {
+                        "text": "Football Data Pipeline • Weekly Report"
+                    }
+                }
+                
+                try:
+                    requests.post(webhook_url, json={"embeds": [embed]})
+                    print("✅ Weekly report sent to Discord")
+                except Exception as e:
+                    print(f"⚠️ Discord report failed: {e}")
+            
+            conn.close()
+        else:
+            print("⚠️ Database not found for reporting")
+        EOF
+      env:
+        DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+
+    - name: Generate Dashboard Data
+      run: |
+        python << 'EOF'
+        import sqlite3
+        import json
+        import os
+        from datetime import datetime, timedelta
+        
+        if os.path.exists('data/football_data.db'):
+            conn = sqlite3.connect('data/football_data.db')
+            conn.row_factory = sqlite3.Row
+            
+            dashboard_data = {}
+            
+            # Upcoming games with latest odds
+            upcoming = conn.execute("""
+                SELECT f.id, f.kickoff_utc, ht.name as home_team, at.name as away_team,
+                       l.name as league, l.country,
+                       oh.home_odds, oh.draw_odds, oh.away_odds, oh.bookmaker,
+                       oh.collected_at
+                FROM fixtures f
+                JOIN teams ht ON f.home_team_id = ht.id
+                JOIN teams at ON f.away_team_id = at.id  
+                JOIN leagues l ON f.league_id = l.id
+                LEFT JOIN (
+                    SELECT fixture_id, home_odds, draw_odds, away_odds, bookmaker, collected_at,
+                           ROW_NUMBER() OVER (PARTITION BY fixture_id ORDER BY collected_at DESC) as rn
+                    FROM odds_history WHERE market_type = 'h2h'
+                ) oh ON f.id = oh.fixture_id AND oh.rn = 1
+                WHERE f.kickoff_utc > datetime('now')
+                AND f.kickoff_utc < datetime('now', '+48 hours')
+                ORDER BY f.kickoff_utc
+                LIMIT 20
+            """).fetchall()
+            
+            dashboard_data['upcoming_games'] = [dict(row) for row in upcoming]
+            
+            # Recent odds movements
+            movements = conn.execute("""
+                WITH recent_odds AS (
+                    SELECT fixture_id, home_odds, away_odds, collected_at, bookmaker,
+                           LAG(home_odds) OVER (PARTITION BY fixture_id, bookmaker ORDER BY collected_at) as prev_home,
+                           LAG(away_odds) OVER (PARTITION BY fixture_id, bookmaker ORDER BY collected_at) as prev_away
+                    FROM odds_history 
+                    WHERE collected_at >= datetime('now', '-24 hours')
+                    AND market_type = 'h2h'
+                )
+                SELECT r.*, f.kickoff_utc, ht.name as home_team, at.name as away_team
+                FROM recent_odds r
+                JOIN fixtures f ON r.fixture_id = f.id
+                JOIN teams ht ON f.home_team_id = ht.id
+                JOIN teams at ON f.away_team_id = at.id
+                WHERE prev_home IS NOT NULL
+                AND (ABS(home_odds - prev_home) / prev_home > 0.1 
+                     OR ABS(away_odds - prev_away) / prev_away > 0.1)
+                ORDER BY r.collected_at DESC
+                LIMIT 10
+            """).fetchall()
+            
+            dashboard_data['odds_movements'] = [dict(row) for row in movements]
+            
+            # League statistics
+            league_stats = conn.execute("""
+                SELECT l.name, l.country, COUNT(DISTINCT f.id) as total_games,
+                       COUNT(DISTINCT oh.id) as odds_records
+                FROM leagues l
+                LEFT JOIN fixtures f ON l.id = f.league_id  
+                LEFT JOIN odds_history oh ON f.id = oh.fixture_id
+                WHERE f.kickoff_utc >= datetime('now', '-30 days')
+                GROUP BY l.id, l.name, l.country
+                ORDER BY total_games DESC
+            """).fetchall()
+            
+            dashboard_data['league_stats'] = [dict(row) for row in league_stats]
+            
+            # Team performance
+            team_performance = conn.execute("""
+                SELECT t.name, ts.win_percentage, ts.goals_for, ts.goals_against,
+                       ts.matches_played, l.name as league
+                FROM team_statistics ts
+                JOIN teams t ON ts.team_id = t.id
+                JOIN leagues l ON ts.league_id = l.id
+                WHERE ts.collection_date >= date('now', '-7 days')
+                AND ts.matches_played >= 5
+                ORDER BY ts.win_percentage DESC
+                LIMIT 20
+            """).fetchall()
+            
+            dashboard_data['top_teams'] = [dict(row) for row in team_performance]
+            
+            # Meta information
+            dashboard_data['last_updated'] = datetime.now().isoformat()
+            dashboard_data['stats'] = {
+                'total_fixtures': conn.execute("SELECT COUNT(*) FROM fixtures").fetchone()[0],
+                'total_odds_records': conn.execute("SELECT COUNT(*) FROM odds_history").fetchone()[0],
+                'active_leagues': len(dashboard_data['league_stats'])
+            }
+            
+            # Save dashboard data
+            with open('data/dashboard_data.json', 'w') as f:
+                json.dump(dashboard_data, f, indent=2)
+            
+            print(f"📊 Dashboard data generated with {len(dashboard_data['upcoming_games'])} games")
+            conn.close()
+        else:
+            print("⚠️ Database not found for dashboard")
+        EOF
+
+    - name: Commit Reports
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        git add data/
+        git commit -m "📋 Generate weekly reports and dashboard data" || exit 0
+        git push
+
+  error-notification:
+    if: failure()
+    needs: [create-jobs, process-jobs, daily-maintenance]
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Notify Discord on Failure
+      run: |
+        webhook_url="${{ secrets.DISCORD_WEBHOOK_URL }}"
+        if [ ! -z "$webhook_url" ]; then
+          curl -H "Content-Type: application/json" -X POST -d '{
+            "embeds": [{
+              "title": "❌ Pipeline Error",
+              "description": "Football data collection pipeline encountered an error",
+              "color": 16711680,
+              "fields": [
+                {
+                  "name": "Repository",
+                  "value": "${{ github.repository }}",
+                  "inline": true
+                },
+                {
+                  "name": "Workflow",
+                  "value": "${{ github.workflow }}",
+                  "inline": true
+                },
+                {
+                  "name": "Run ID",
+                  "value": "[#${{ github.run_number }}](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})",
+                  "inline": true
+                }
+              ],
+              "timestamp": "'$(date -u +%Y-%m-%dT%H:%M:%S.000Z)'"
+            }]
+          }' "$webhook_url"
+        fi

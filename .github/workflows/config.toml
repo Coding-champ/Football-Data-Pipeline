@@ -1,0 +1,19 @@
+# .streamlit/config.toml
+[theme]
+primaryColor = "#00ff88"
+backgroundColor = "#0e1117" 
+secondaryBackgroundColor = "#262730"
+textColor = "#ffffff"
+font = "sans serif"
+
+[server]
+maxUploadSize = 200
+enableXsrfProtection = false
+enableCORS = false
+
+[browser]
+gatherUsageStats = false
+
+# .streamlit/secrets.toml (für lokale Entwicklung - NICHT committen!)
+# API_FOOTBALL_KEY = "dein_key_hier"
+# ODDS_API_KEY = "dein_key_hier"
