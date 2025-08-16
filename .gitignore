@@ -19,10 +19,22 @@ data/test*.db
 data/demo*.db
 data/validation*.db
 data/final_test*.db
-data/*_report.json
-data/dashboard_data.json
-data/api_usage.json
-data/health_status.json
+
+# Allow essential pipeline files for Enhanced Features
+# These files are required for the workflow to commit successfully
+
+# Block only test/demo report files, but allow essential mapping and analytics reports
+data/test*_report.json
+data/demo*_report.json
+data/validation*_report.json
+
+# Essential pipeline files that MUST be tracked:
+# data/health_status.json - Health monitoring reports
+# data/dashboard_data.json - Dashboard data  
+# data/api_usage.json - API usage tracking
+# data/weekly_report.json - Weekly analytics
+# data/daily_mapping_stats.json - Daily mapping statistics
+# data/*_mapping_report.json - Enhanced mapping reports
 
 # Logs
 *.log
