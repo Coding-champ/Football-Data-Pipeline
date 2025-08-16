@@ -759,23 +759,6 @@ jobs:
         else:
             print("ℹ️ No jobs ready for processing")
         EOF
-                    "fields": [
-                        {
-                            "name": "Jobs Completed",
-                            "value": "\n".join(processed_jobs[:5]),
-                            "inline": True
-                        }
-                    ],
-                    "timestamp": datetime.now().isoformat()
-                }
-                
-                try:
-                    requests.post(webhook_url, json={"embeds": [embed]})
-                except:
-                    pass
-        else:
-            print("ℹ️ No jobs ready for processing")
-        EOF
       env:
         API_FOOTBALL_KEY: ${{ secrets.API_FOOTBALL_KEY }}
         ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
@@ -939,23 +922,6 @@ jobs:
         git add data/health_status.json
         git commit -m "🏥 Update pipeline health status" || exit 0
         git push
-                    "fields": [
-                        {
-                            "name": "Jobs Completed",
-                            "value": "\n".join(processed_jobs[:5]),
-                            "inline": True
-                        }
-                    ],
-                    "timestamp": datetime.now().isoformat()
-                }
-                
-                try:
-                    requests.post(webhook_url, json={"embeds": [embed]})
-                except:
-                    pass
-        else:
-            print("ℹ️ No jobs ready for processing")
-        EOF
       env:
         API_FOOTBALL_KEY: ${{ secrets.API_FOOTBALL_KEY }}
         ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
