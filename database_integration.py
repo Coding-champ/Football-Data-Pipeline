@@ -5,7 +5,10 @@ Speichert API-Daten strukturiert für Trend-Analyse
 
 import json
 import sqlite3
-import psycopg2
+try:
+    import psycopg2
+except ImportError:
+    psycopg2 = None
 from datetime import datetime, timedelta
 import os
 from typing import Dict, List, Optional, Any
@@ -39,6 +42,8 @@ class FootballDatabase:
                 logger.info(f"Connected to SQLite database: {db_path}")
                 
             elif self.db_type == 'postgresql':
+                if not psycopg2:
+                    raise ImportError("psycopg2 is required for PostgreSQL connections")
                 self.connection = psycopg2.connect(**self.connection_params)
                 logger.info("Connected to PostgreSQL database")
                 
@@ -117,20 +122,12 @@ class FootballDatabase:
         """Store or update team information"""
         team_id = fixture_info[f'{team_type}_team_id']
         team_name = fixture_info[f'{team_type}_team']
+        country = fixture_info.get('country', 'Unknown')
         
-        # Check if team exists
-        existing = self.execute_query(
-            "SELECT id FROM teams WHERE id = ?", 
-            (team_id,)
-        )
-        
-        if not existing:
-            self.execute_query(
-                """INSERT INTO teams (id, name, country, created_at) 
-                   VALUES (?, ?, ?, ?)""",
-                (team_id, team_name, fixture_info.get('country', 'Unknown'), datetime.now())
-            )
-            logger.info(f"➕ Added new team: {team_name}")
+        self.execute_query("""
+            INSERT OR REPLACE INTO teams (id, name, country, updated_at) 
+            VALUES (?, ?, ?, ?)
+        """, (team_id, team_name, country, datetime.now()))
         
         return team_id
     
@@ -255,10 +252,106 @@ class FootballDatabase:
              round((fixtures.get('wins', {}).get('total', 0) / max(fixtures.get('played', {}).get('total', 1), 1)) * 100, 2))
         )
     
+    def _store_head_to_head(self, home_team_id: int, away_team_id: int, h2h_data: Dict):
+        """Store head-to-head history data"""
+        if not h2h_data or 'response' not in h2h_data:
+            return
+            
+        for fixture in h2h_data['response']:
+            fixture_id = fixture['fixture']['id']
+            match_date = datetime.fromisoformat(fixture['fixture']['date'][:10])
+            
+            # Get score if available
+            home_score = fixture.get('goals', {}).get('home')
+            away_score = fixture.get('goals', {}).get('away')
+            
+            # Determine which team was home/away in this historical match
+            historical_home_id = fixture['teams']['home']['id'] 
+            historical_away_id = fixture['teams']['away']['id']
+            
+            self.execute_query(
+                """INSERT OR IGNORE INTO head_to_head 
+                   (home_team_id, away_team_id, fixture_id, home_score, away_score, 
+                    match_date, league_id)
+                   VALUES (?, ?, ?, ?, ?, ?, ?)""",
+                (historical_home_id, historical_away_id, fixture_id, 
+                 home_score, away_score, match_date, fixture.get('league', {}).get('id'))
+            )
+    
+    def _store_lineups(self, fixture_id: int, lineup_data: Dict):
+        """Store lineup information"""
+        if not lineup_data or 'response' not in lineup_data:
+            return
+            
+        for lineup in lineup_data['response']:
+            team_id = lineup['team']['id']
+            formation = lineup.get('formation', 'Unknown')
+            
+            # Store starting XI
+            for player in lineup.get('startXI', []):
+                player_id = player['player']['id']
+                player_name = player['player']['name']
+                position = player.get('player', {}).get('pos', 'Unknown')
+                
+                # Store player if not exists
+                self.execute_query(
+                    """INSERT OR IGNORE INTO players (id, name, team_id, position)
+                       VALUES (?, ?, ?, ?)""",
+                    (player_id, player_name, team_id, position)
+                )
+                
+                # Store lineup entry
+                self.execute_query(
+                    """INSERT OR REPLACE INTO lineups 
+                       (fixture_id, team_id, formation, player_id, position, is_starter, is_captain)
+                       VALUES (?, ?, ?, ?, ?, ?, ?)""",
+                    (fixture_id, team_id, formation, player_id, position, 1, 
+                     player.get('player', {}).get('captain', False))
+                )
+            
+            # Store substitutes
+            for player in lineup.get('substitutes', []):
+                player_id = player['player']['id']
+                player_name = player['player']['name']
+                position = player.get('player', {}).get('pos', 'Unknown')
+                
+                # Store player if not exists
+                self.execute_query(
+                    """INSERT OR IGNORE INTO players (id, name, team_id, position)
+                       VALUES (?, ?, ?, ?)""",
+                    (player_id, player_name, team_id, position)
+                )
+                
+                # Store lineup entry
+                self.execute_query(
+                    """INSERT OR REPLACE INTO lineups 
+                       (fixture_id, team_id, formation, player_id, position, is_starter)
+                       VALUES (?, ?, ?, ?, ?, ?)""",
+                    (fixture_id, team_id, formation, player_id, position, 0)
+                )
+    
     def _detect_team_events(self, fixture_info: Dict, api_data: Dict):
         """Detect injuries, suspensions from data changes"""
-        # Einfache Event-Detection basierend auf Datenänderungen
-        # Hier könntest du komplexere Logik implementieren
+        # Simple event detection based on data changes
+        # This could be enhanced with more sophisticated logic
+        
+        # Check for lineup changes that might indicate injuries/suspensions
+        if 'lineups' in api_data:
+            lineups = api_data['lineups']
+            if lineups.get('response'):
+                for lineup in lineups['response']:
+                    team_id = lineup['team']['id']
+                    formation = lineup.get('formation', 'Unknown')
+                    
+                    # Check for missing key players (basic implementation)
+                    if lineup.get('startXI'):
+                        # Could implement logic to detect when expected players are missing
+                        pass
+        
+        # Could add more event detection logic here:
+        # - Analysis of team news
+        # - Comparison with previous lineups
+        # - Integration with external injury databases
         pass
     
     def get_odds_trends(self, fixture_id: int) -> List[Dict]:
