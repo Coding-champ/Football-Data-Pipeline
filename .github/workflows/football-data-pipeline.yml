@@ -334,7 +334,7 @@ jobs:
                         mapper = EnhancedTeamMapper(db_path='data/football_data.db')
                         
                         # Get daily mapping performance
-                        mapping_stats = mapper.get_mapping_stats()
+                        mapping_stats = mapper.stats
                         if mapping_stats.total_attempts > 0:
                             success_rate = mapping_stats.success_rate
                             print(f"📊 Daily mapping success rate: {success_rate:.1%} ({mapping_stats.successful_mappings}/{mapping_stats.total_attempts})")
@@ -1203,7 +1203,7 @@ jobs:
                 mapper = EnhancedTeamMapper(db_path='data/football_data.db')
                 
                 # Get current mapping statistics  
-                stats = mapper.get_mapping_stats()
+                stats = mapper.stats
                 report = mapper.get_mapping_report(days=1) if stats.total_attempts >= 3 else None
                 
                 if stats.total_attempts > 0:
