@@ -24,5 +24,12 @@ discord.py>=2.3.2
 # Template Engine for Static Dashboard
 jinja2>=3.1.2
 
-# Additional utilities
+# Enhanced Mapping Dependencies
+# difflib is built into Python (for fuzzy matching)
+
+# Database Integration
+# sqlite3 is built into Python
+# For PostgreSQL (optional): psycopg2-binary>=2.9.7
+
+# Additional utilities  
 python-dotenv>=1.0.0
