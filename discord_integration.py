@@ -3,8 +3,17 @@ Discord Bot Integration für Football Data Pipeline
 Umfassende Features für Notifications, Commands und Interaktionen
 """
 
-import discord
-from discord.ext import commands, tasks
+try:
+    import discord
+    from discord.ext import commands, tasks
+    DISCORD_AVAILABLE = True
+except ImportError:
+    # Discord bot features not available, but webhook still works
+    DISCORD_AVAILABLE = False
+    discord = None
+    commands = None
+    tasks = None
+
 import asyncio
 import json
 from datetime import datetime, timedelta
@@ -12,12 +21,17 @@ import requests
 import os
 from typing import Dict, List
 import sqlite3
-import matplotlib.pyplot as plt
-import seaborn as sns
+try:
+    import matplotlib.pyplot as plt
+    import seaborn as sns
+    PLOTTING_AVAILABLE = True
+except ImportError:
+    PLOTTING_AVAILABLE = False
 import io
 import base64
 
-class FootballDiscordBot(commands.Bot):
+if DISCORD_AVAILABLE:
+    class FootballDiscordBot(commands.Bot):
     def __init__(self, database_path: str):
         intents = discord.Intents.default()
         intents.message_content = True
@@ -542,14 +556,21 @@ if __name__ == "__main__":
         print("• Interactive commands (!fb games, !fb odds, !fb trends)")
         print("• Trend visualizations")
         print("• Team form analysis")
-        print("• GitHub Actions webhook integration").status = 'scheduled'
-            """).fetchall()
+        print("• GitHub Actions webhook integration")
+        
+        # Example of how to initialize the bot
+        if __name__ == "__main__":
+            # Bot setup example
+            TOKEN = os.getenv('DISCORD_BOT_TOKEN')
+            DATABASE_PATH = 'data/football_data.db'
             
-            for game in upcoming:
-                await self.send_game_preview(game)
-                
-        except Exception as e:
-            print(f"Error in upcoming games check: {e}")
+            if TOKEN:
+                bot = FootballDiscordBot(DATABASE_PATH)
+                print("🤖 Starting Discord bot...")
+                bot.run(TOKEN)
+            else:
+                print("⚠️ DISCORD_BOT_TOKEN not set - webhook only mode")
+                print("Set DISCORD_WEBHOOK_URL for webhook notifications")
     
     @tasks.loop(minutes=15)
     async def odds_movement_alerts(self):
@@ -577,4 +598,14 @@ if __name__ == "__main__":
                 WHERE prev_home_odds IS NOT NULL
                 AND (ABS(home_odds - prev_home_odds) / prev_home_odds > 0.1
                      OR ABS(away_odds - prev_away_odds) / prev_away_odds > 0.1)
-                AND f
+                AND f.kickoff_utc > datetime('now')
+                ORDER BY r.collected_at DESC
+                LIMIT 10
+            """).fetchall()
+            
+            conn.close()
+            return movements
+            
+        except Exception as e:
+            print(f"Error getting odds movements: {e}")
+            return []

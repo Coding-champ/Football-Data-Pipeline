@@ -24,6 +24,11 @@ env:
   API_FOOTBALL_KEY: ${{ secrets.API_FOOTBALL_KEY }}
   ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
   DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+  # Enhanced Features Configuration
+  ENABLE_ENHANCED_MAPPING: 'true'
+  MAPPING_CONFIDENCE_THRESHOLD: '0.7'
+  DATABASE_ANALYTICS: 'enabled'
+  AUTO_LEARNING: 'true'
 
 jobs:
   create-jobs:
@@ -42,115 +47,31 @@ jobs:
       run: |
         pip install requests python-dateutil pytz
         
-    - name: Initialize Database
+    - name: Initialize Enhanced Database
       run: |
         mkdir -p data
+        # Use existing database schema instead of inline schema
+        sqlite3 data/football_data.db < database_schema.sql
+        
+        # Initialize enhanced mapping tables
         python << 'EOF'
+        import sys
+        sys.path.append('.')
+        try:
+            from enhanced_mapping import EnhancedTeamMapper
+            # Initialize enhanced mapper which creates mapping tables
+            mapper = EnhancedTeamMapper(db_path='data/football_data.db', learn_mappings=True)
+            print("✅ Enhanced mapping database initialized")
+        except Exception as e:
+            print(f"⚠️ Enhanced mapping initialization failed: {e}")
+            
+        # Verify database setup
         import sqlite3
-        
-        # Database Schema
-        schema_sql = '''
-        CREATE TABLE IF NOT EXISTS teams (
-            id INTEGER PRIMARY KEY,
-            name TEXT NOT NULL,
-            country TEXT,
-            logo_url TEXT,
-            founded INTEGER,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        );
-
-        CREATE TABLE IF NOT EXISTS leagues (
-            id INTEGER PRIMARY KEY,
-            name TEXT NOT NULL,
-            country TEXT,
-            season INTEGER NOT NULL,
-            logo_url TEXT,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            UNIQUE(id, season)
-        );
-
-        CREATE TABLE IF NOT EXISTS fixtures (
-            id INTEGER PRIMARY KEY,
-            league_id INTEGER NOT NULL,
-            season INTEGER NOT NULL,
-            home_team_id INTEGER NOT NULL,
-            away_team_id INTEGER NOT NULL,
-            kickoff_utc TIMESTAMP NOT NULL,
-            venue_name TEXT,
-            status TEXT DEFAULT 'scheduled',
-            home_score INTEGER,
-            away_score INTEGER,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (league_id) REFERENCES leagues(id),
-            FOREIGN KEY (home_team_id) REFERENCES teams(id),
-            FOREIGN KEY (away_team_id) REFERENCES teams(id)
-        );
-
-        CREATE TABLE IF NOT EXISTS odds_history (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            fixture_id INTEGER NOT NULL,
-            bookmaker TEXT NOT NULL,
-            market_type TEXT NOT NULL,
-            home_odds REAL,
-            draw_odds REAL,
-            away_odds REAL,
-            over_odds REAL,
-            under_odds REAL,
-            handicap REAL,
-            total_points REAL,
-            collected_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            collection_phase TEXT NOT NULL,
-            FOREIGN KEY (fixture_id) REFERENCES fixtures(id)
-        );
-
-        CREATE TABLE IF NOT EXISTS team_statistics (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            team_id INTEGER NOT NULL,
-            league_id INTEGER NOT NULL,
-            season INTEGER NOT NULL,
-            collection_date DATE NOT NULL,
-            matches_played INTEGER DEFAULT 0,
-            wins INTEGER DEFAULT 0,
-            draws INTEGER DEFAULT 0,
-            losses INTEGER DEFAULT 0,
-            goals_for INTEGER DEFAULT 0,
-            goals_against INTEGER DEFAULT 0,
-            win_percentage REAL DEFAULT 0,
-            form_last_5 TEXT,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (team_id) REFERENCES teams(id),
-            FOREIGN KEY (league_id) REFERENCES leagues(id),
-            UNIQUE(team_id, league_id, season, collection_date)
-        );
-
-        CREATE TABLE IF NOT EXISTS team_events (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            team_id INTEGER NOT NULL,
-            player_id INTEGER,
-            event_type TEXT NOT NULL,
-            event_description TEXT,
-            severity TEXT,
-            start_date DATE NOT NULL,
-            end_date DATE,
-            detected_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            source TEXT,
-            FOREIGN KEY (team_id) REFERENCES teams(id)
-        );
-
-        CREATE INDEX IF NOT EXISTS idx_fixtures_kickoff ON fixtures(kickoff_utc);
-        CREATE INDEX IF NOT EXISTS idx_odds_fixture ON odds_history(fixture_id, market_type, collected_at);
-        CREATE INDEX IF NOT EXISTS idx_odds_collected ON odds_history(collected_at);
-        CREATE INDEX IF NOT EXISTS idx_team_stats_date ON team_statistics(collection_date);
-        CREATE INDEX IF NOT EXISTS idx_events_detected ON team_events(detected_at);
-        '''
-        
         conn = sqlite3.connect('data/football_data.db')
-        conn.executescript(schema_sql)
-        conn.commit()
+        cursor = conn.execute("SELECT name FROM sqlite_master WHERE type='table'")
+        tables = [row[0] for row in cursor.fetchall()]
+        print(f"✅ Database initialized with {len(tables)} tables: {', '.join(tables)}")
         conn.close()
-        print("✅ Database initialized successfully")
         EOF
     
     - name: Create Job Queue
@@ -399,98 +320,120 @@ jobs:
                 sys.path.append('.')
                 from database_integration import FootballDatabase
                 
-                # Initialize database connection
+                # Initialize enhanced database connection
                 db = FootballDatabase('sqlite', {'database': 'data/football_data.db'})
                 
                 # Store using enhanced database integration
                 fixture_id = db.store_fixture_data(collected_data, collection_type)
+                print(f"✅ Enhanced database storage completed for fixture {fixture_id}")
                 
-                # Generate mapping report if this is final data collection
+                # Generate and store mapping analytics if this is final data collection
                 if collection_type == 'final_data':
                     try:
                         from enhanced_mapping import EnhancedTeamMapper
                         mapper = EnhancedTeamMapper(db_path='data/football_data.db')
-                        mapping_report = mapper.get_mapping_report(days=1)
                         
-                        # Save mapping report
-                        if mapping_report:
-                            with open('data/daily_mapping_report.json', 'w') as f:
-                                json.dump(mapping_report, f, indent=2)
-                            print(f"  📊 Mapping report generated: {mapping_report['overall_stats']['success_rate']:.1%} success rate")
+                        # Get daily mapping performance
+                        mapping_stats = mapper.stats
+                        if mapping_stats.total_attempts > 0:
+                            success_rate = mapping_stats.success_rate
+                            print(f"📊 Daily mapping success rate: {success_rate:.1%} ({mapping_stats.successful_mappings}/{mapping_stats.total_attempts})")
+                            
+                            # Generate detailed mapping report for significant activity
+                            if mapping_stats.total_attempts >= 5:
+                                mapping_report = mapper.get_mapping_report(days=1)
+                                if mapping_report:
+                                    with open('data/daily_mapping_report.json', 'w') as f:
+                                        json.dump(mapping_report, f, indent=2)
+                                    print(f"📈 Generated mapping report: avg confidence {mapping_report['overall_stats']['avg_confidence']:.3f}")
+                        
                     except Exception as e:
-                        print(f"  ⚠️ Mapping report generation failed: {e}")
+                        print(f"⚠️ Mapping analytics generation failed: {e}")
                 
                 db.close()
                 return fixture_id
                 
             except Exception as e:
-                print(f"  ❌ Enhanced database storage failed: {e}")
-                # Fallback to original storage logic
-                conn = sqlite3.connect('data/football_data.db')
-                fixture_id = collected_data['fixture_id']
-                game_info = collected_data['game_info']
-                api_data = collected_data['data']
+                print(f"❌ Enhanced database storage failed: {e}")
+                print(f"🔄 Falling back to basic database storage...")
                 
-                # Store Teams
-                for team_type in ['home', 'away']:
-                    team_id = game_info[f'{team_type}_team_id']
-                    team_name = game_info[f'{team_type}_team']
+                # Enhanced fallback with better error handling
+                try:
+                    conn = sqlite3.connect('data/football_data.db')
+                    fixture_id = collected_data['fixture_id']
+                    game_info = collected_data['game_info']
+                    api_data = collected_data['data']
+                    
+                    # Store basic fixture information
+                    for team_type in ['home', 'away']:
+                        team_id = game_info[f'{team_type}_team_id']
+                        team_name = game_info[f'{team_type}_team']
+                        
+                        conn.execute("""
+                            INSERT OR IGNORE INTO teams (id, name, country, created_at) 
+                            VALUES (?, ?, ?, ?)
+                        """, (team_id, team_name, game_info.get('country', 'Unknown'), datetime.now()))
+                    
+                    # Store league
+                    league_id = game_info['league_id']
+                    league_name = game_info['league']
+                    season = datetime.now().year if datetime.now().month >= 8 else datetime.now().year - 1
                     
                     conn.execute("""
-                        INSERT OR IGNORE INTO teams (id, name, country, created_at) 
+                        INSERT OR IGNORE INTO leagues (id, name, country, season) 
                         VALUES (?, ?, ?, ?)
-                    """, (team_id, team_name, game_info.get('country', 'Unknown'), datetime.now()))
-                
-                # Store League
-                league_id = game_info['league_id']
-                league_name = game_info['league']
-                season = datetime.now().year if datetime.now().month >= 8 else datetime.now().year - 1
-                
-                conn.execute("""
-                    INSERT OR IGNORE INTO leagues (id, name, country, season) 
-                    VALUES (?, ?, ?, ?)
-                """, (league_id, league_name, game_info.get('country', 'Unknown'), season))
-                
-                # Store Fixture
-                kickoff = datetime.fromisoformat(game_info['kickoff_utc'].replace('Z', '+00:00'))
-                
-                conn.execute("""
-                    INSERT OR IGNORE INTO fixtures 
-                    (id, league_id, season, home_team_id, away_team_id, kickoff_utc, venue_name)
-                    VALUES (?, ?, ?, ?, ?, ?, ?)
-                """, (fixture_id, league_id, season, game_info['home_team_id'], 
-                     game_info['away_team_id'], kickoff, game_info.get('venue', 'Unknown')))
-                
-                # Store Odds History
-                for odds_key in api_data.keys():
-                    if odds_key.startswith('odds_'):
-                        odds_data = api_data[odds_key]
-                        if odds_data and 'bookmakers' in odds_data:
-                            for bookmaker_data in odds_data['bookmakers']:
-                                bookmaker = bookmaker_data['name']
-                                
-                                for market in bookmaker_data.get('markets', []):
-                                    market_type = market['key']
+                    """, (league_id, league_name, game_info.get('country', 'Unknown'), season))
+                    
+                    # Store fixture
+                    kickoff = datetime.fromisoformat(game_info['kickoff_utc'].replace('Z', '+00:00'))
+                    
+                    conn.execute("""
+                        INSERT OR IGNORE INTO fixtures 
+                        (id, league_id, season, home_team_id, away_team_id, kickoff_utc, venue_name)
+                        VALUES (?, ?, ?, ?, ?, ?, ?)
+                    """, (fixture_id, league_id, season, game_info['home_team_id'], 
+                         game_info['away_team_id'], kickoff, game_info.get('venue', 'Unknown')))
+                    
+                    # Store odds data if available
+                    odds_stored = 0
+                    for odds_key in api_data.keys():
+                        if odds_key.startswith('odds_') and api_data[odds_key]:
+                            odds_data = api_data[odds_key]
+                            if isinstance(odds_data, dict) and 'bookmakers' in odds_data:
+                                for bookmaker_data in odds_data['bookmakers']:
+                                    bookmaker = bookmaker_data.get('title', bookmaker_data.get('name', 'Unknown'))
                                     
-                                    home_odds = draw_odds = away_odds = None
-                                    
-                                    if market_type == 'h2h':
-                                        outcomes = {o['name']: o['price'] for o in market['outcomes']}
-                                        home_odds = outcomes.get(odds_data.get('home_team', ''))
-                                        away_odds = outcomes.get(odds_data.get('away_team', ''))
-                                        draw_odds = outcomes.get('Draw')
-                                    
-                                    conn.execute("""
-                                        INSERT INTO odds_history 
-                                        (fixture_id, bookmaker, market_type, home_odds, draw_odds, away_odds,
-                                         collected_at, collection_phase)
-                                        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-                                    """, (fixture_id, bookmaker, market_type, home_odds, draw_odds, away_odds,
-                                         datetime.now(), collection_type))
-                
-                conn.commit()
-                conn.close()
-                return fixture_id
+                                    for market in bookmaker_data.get('markets', []):
+                                        market_type = market.get('key', 'h2h')
+                                        
+                                        # Extract odds based on market type
+                                        home_odds = draw_odds = away_odds = None
+                                        
+                                        if market_type == 'h2h' and 'outcomes' in market:
+                                            outcomes = {o['name']: o['price'] for o in market['outcomes']}
+                                            home_odds = outcomes.get(odds_data.get('home_team', ''))
+                                            away_odds = outcomes.get(odds_data.get('away_team', ''))
+                                            draw_odds = outcomes.get('Draw')
+                                        
+                                        if any([home_odds, draw_odds, away_odds]):
+                                            conn.execute("""
+                                                INSERT INTO odds_history 
+                                                (fixture_id, bookmaker, market_type, home_odds, draw_odds, away_odds,
+                                                 collected_at, collection_phase)
+                                                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                                            """, (fixture_id, bookmaker, market_type, home_odds, draw_odds, away_odds,
+                                                 datetime.now(), collection_type))
+                                            odds_stored += 1
+                    
+                    conn.commit()
+                    conn.close()
+                    
+                    print(f"✅ Fallback storage completed: {odds_stored} odds records stored")
+                    return fixture_id
+                    
+                except Exception as fallback_error:
+                    print(f"❌ Fallback storage also failed: {fallback_error}")
+                    return None
         
         def collect_game_data(job):
             """Sammelt Daten basierend auf Job-Typ"""
@@ -1244,7 +1187,7 @@ jobs:
       env:
         DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
 
-    - name: Generate Daily Mapping Report
+    - name: Generate Enhanced Daily Mapping Report
       run: |
         python << 'EOF'
         import json
@@ -1258,83 +1201,110 @@ jobs:
             
             if os.path.exists('data/football_data.db'):
                 mapper = EnhancedTeamMapper(db_path='data/football_data.db')
-                report = mapper.get_mapping_report(days=1)  # Daily report
                 
-                if report:
-                    # Save the report
-                    with open('data/daily_mapping_report.json', 'w') as f:
-                        json.dump(report, f, indent=2)
+                # Get current mapping statistics  
+                stats = mapper.stats
+                report = mapper.get_mapping_report(days=1) if stats.total_attempts >= 3 else None
+                
+                if stats.total_attempts > 0:
+                    print(f"📊 Enhanced Daily Mapping Report:")
+                    print(f"   🎯 Success Rate: {stats.success_rate:.1%}")
+                    print(f"   📈 Total Attempts: {stats.total_attempts}")
+                    print(f"   ⚡ Avg Confidence: {stats.avg_confidence:.3f}")
                     
-                    overall = report['overall_stats']
-                    print(f"📊 Daily Mapping Report Generated:")
-                    print(f"   🎯 Success Rate: {overall['success_rate']:.1%}")
-                    print(f"   📈 Total Attempts: {overall['total_attempts']}")
-                    print(f"   ⚡ Avg Confidence: {overall['avg_confidence']:.3f}")
-                    print(f"   🧠 Learned Mappings: {report['learned_mappings_count']}")
+                    # Save the statistics
+                    stats_data = {
+                        'date': datetime.now().date().isoformat(),
+                        'stats': {
+                            'total_attempts': stats.total_attempts,
+                            'successful_mappings': stats.successful_mappings,
+                            'failed_mappings': stats.failed_mappings,
+                            'success_rate': stats.success_rate,
+                            'avg_confidence': stats.avg_confidence,
+                            'strategy_usage': stats.strategy_usage
+                        },
+                        'report': report
+                    }
                     
-                    # Discord notification for significant improvements or issues
+                    with open('data/daily_mapping_stats.json', 'w') as f:
+                        json.dump(stats_data, f, indent=2)
+                    
+                    # Enhanced Discord notification with better formatting
                     webhook_url = os.getenv('DISCORD_WEBHOOK_URL')
-                    if webhook_url and overall['total_attempts'] > 0:
-                        embed_color = 0x00ff00 if overall['success_rate'] > 0.8 else 0xffaa00 if overall['success_rate'] > 0.6 else 0xff0000
+                    if webhook_url and stats.total_attempts >= 5:  # Only for significant activity
+                        embed_color = 0x00ff00 if stats.success_rate > 0.85 else 0xffaa00 if stats.success_rate > 0.65 else 0xff0000
                         
                         embed = {
-                            "title": "🎯 Daily Team Mapping Report",
-                            "description": f"Enhanced mapping performance for {datetime.now().strftime('%Y-%m-%d')}",
+                            "title": "🎯 Enhanced Team Mapping Report",
+                            "description": f"Intelligent mapping performance for {datetime.now().strftime('%Y-%m-%d')}",
                             "color": embed_color,
                             "fields": [
                                 {
-                                    "name": "📊 Overall Performance",
-                                    "value": f"**Success Rate**: {overall['success_rate']:.1%}\n**Attempts**: {overall['total_attempts']}\n**Avg Confidence**: {overall['avg_confidence']:.3f}",
-                                    "inline": True
-                                },
-                                {
-                                    "name": "🧠 Learning Progress", 
-                                    "value": f"**Learned Mappings**: {report['learned_mappings_count']}\n**Manual Mappings**: {report['manual_mappings_count']}\n**Total Knowledge**: {report['learned_mappings_count'] + report['manual_mappings_count']}",
+                                    "name": "📊 Performance Metrics",
+                                    "value": f"**Success Rate**: {stats.success_rate:.1%}\n**Attempts**: {stats.total_attempts}\n**Avg Confidence**: {stats.avg_confidence:.3f}",
                                     "inline": True
                                 }
                             ],
                             "timestamp": datetime.now().isoformat()
                         }
                         
-                        # Add top performing strategies
-                        if report['strategy_performance']:
-                            top_strategies = sorted(report['strategy_performance'], 
-                                                  key=lambda x: x['success_rate'], reverse=True)[:3]
-                            strategy_text = "\n".join([
-                                f"• {strategy['strategy_used']}: {strategy['success_rate']:.1%} ({strategy['successes']}/{strategy['attempts']})"
-                                for strategy in top_strategies
-                            ])
+                        # Add learning progress if available
+                        if report:
+                            learned_count = report.get('learned_mappings_count', 0)
+                            manual_count = report.get('manual_mappings_count', 0)
                             embed['fields'].append({
-                                "name": "🏆 Top Strategies",
-                                "value": strategy_text,
-                                "inline": False
+                                "name": "🧠 Knowledge Base",
+                                "value": f"**Learned**: {learned_count}\n**Manual**: {manual_count}\n**Total**: {learned_count + manual_count}",
+                                "inline": True
                             })
+                            
+                            # Add strategy performance
+                            if report.get('strategy_performance'):
+                                top_strategies = sorted(report['strategy_performance'], 
+                                                      key=lambda x: x['success_rate'], reverse=True)[:3]
+                                strategy_text = "\n".join([
+                                    f"• {strategy['strategy_used']}: {strategy['success_rate']:.1%}"
+                                    for strategy in top_strategies
+                                ])
+                                embed['fields'].append({
+                                    "name": "🏆 Top Strategies",
+                                    "value": strategy_text,
+                                    "inline": False
+                                })
                         
-                        # Add failed mappings if any
-                        if report['failed_mappings']:
-                            failed_count = len(report['failed_mappings'])
-                            embed['fields'].append({
-                                "name": "⚠️ Failed Mappings",
-                                "value": f"{failed_count} unique team names need attention",
-                                "inline": False
-                            })
+                        # Add improvement suggestions for poor performance
+                        if stats.success_rate < 0.65:
+                            suggestions = []
+                            if stats.failed_mappings > stats.successful_mappings * 0.5:
+                                suggestions.append("• High failure rate - manual verification needed")
+                            if stats.avg_confidence < 0.5:
+                                suggestions.append("• Low confidence - expand mapping database")
+                            
+                            if suggestions:
+                                embed['fields'].append({
+                                    "name": "💡 Improvement Suggestions",
+                                    "value": "\n".join(suggestions),
+                                    "inline": False
+                                })
                         
                         try:
                             import requests
                             requests.post(webhook_url, json={"embeds": [embed]})
-                            print("✅ Mapping report sent to Discord")
+                            print("✅ Enhanced mapping report sent to Discord")
                         except Exception as e:
                             print(f"⚠️ Discord mapping report failed: {e}")
-                    
+                
                 else:
-                    print("ℹ️ No mapping data available for reporting")
+                    print("ℹ️ No mapping attempts today - report skipped")
             else:
                 print("⚠️ Database not found for mapping report")
                 
         except ImportError:
-            print("⚠️ Enhanced mapping not available")
+            print("⚠️ Enhanced mapping not available - using basic reporting")
         except Exception as e:
-            print(f"⚠️ Mapping report generation failed: {e}")
+            print(f"⚠️ Enhanced mapping report generation failed: {e}")
+            import traceback
+            traceback.print_exc()
         EOF
       env:
         DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}

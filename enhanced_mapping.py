@@ -17,7 +17,7 @@ Mit automatischem Lernen und Performance-Tracking
 import json
 import os
 import sqlite3
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Tuple, Any
 import difflib
 from dataclasses import dataclass, asdict
