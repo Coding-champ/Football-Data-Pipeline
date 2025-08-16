@@ -1,4 +1,3 @@
-# .github/workflows/enhanced-football-pipeline.yml
 name: Enhanced Football Data Pipeline with Database
 
 on:
