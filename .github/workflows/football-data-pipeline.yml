@@ -789,6 +789,186 @@ jobs:
         git commit -m "📊 Process data collection jobs" || exit 0
         git push
 
+
+
+  health-check:
+    runs-on: ubuntu-latest
+    needs: [process-jobs]
+    if: always()
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Pipeline Health Check
+      run: |
+        python << 'EOF'
+        import json
+        import os
+        from datetime import datetime, timedelta
+        
+        health_status = {
+            'timestamp': datetime.now().isoformat(),
+            'pipeline_status': 'healthy',
+            'issues': [],
+            'recommendations': []
+        }
+        
+        # Check jobs.json
+        try:
+            with open('jobs.json', 'r') as f:
+                jobs = json.load(f)
+            
+            pending_jobs = [j for j in jobs if j['status'] == 'pending']
+            failed_jobs = [j for j in jobs if j['status'] == 'failed']
+            expired_jobs = [j for j in jobs if j['status'] == 'expired']
+            completed_jobs = [j for j in jobs if j['status'] == 'completed']
+            
+            # Health indicators
+            if len(failed_jobs) > len(completed_jobs) * 0.2:  # >20% failure rate
+                health_status['issues'].append('High job failure rate')
+                health_status['pipeline_status'] = 'degraded'
+            
+            if len(expired_jobs) > 10:
+                health_status['issues'].append('Many expired jobs - possible scheduling issues')
+                health_status['recommendations'].append('Check API rate limits and processing capacity')
+            
+            if len(pending_jobs) > 50:
+                health_status['issues'].append('Large job backlog')
+                health_status['recommendations'].append('Consider increasing processing frequency')
+            
+            # Check recent activity (last 24h)
+            yesterday = datetime.now() - timedelta(hours=24)
+            recent_jobs = [j for j in jobs if j.get('processed_at', '1970-01-01') >= yesterday.isoformat()]
+            
+            if len(recent_jobs) == 0:
+                health_status['issues'].append('No recent job activity')
+                health_status['pipeline_status'] = 'unhealthy'
+            
+        except FileNotFoundError:
+            health_status['issues'].append('jobs.json not found')
+            health_status['pipeline_status'] = 'unhealthy'
+        except Exception as e:
+            health_status['issues'].append(f'Job analysis failed: {e}')
+        
+        # Check database
+        if os.path.exists('data/football_data.db'):
+            try:
+                import sqlite3
+                conn = sqlite3.connect('data/football_data.db')
+                
+                # Check recent data
+                cursor = conn.execute("SELECT COUNT(*) FROM odds_history WHERE collected_at >= datetime('now', '-24 hours')")
+                recent_odds = cursor.fetchone()[0]
+                
+                cursor = conn.execute("SELECT COUNT(*) FROM fixtures WHERE kickoff_utc > datetime('now')")
+                future_fixtures = cursor.fetchone()[0]
+                
+                if recent_odds == 0:
+                    health_status['issues'].append('No recent odds data collected')
+                
+                if future_fixtures == 0:
+                    health_status['issues'].append('No upcoming fixtures found')
+                
+                conn.close()
+                
+            except Exception as e:
+                health_status['issues'].append(f'Database check failed: {e}')
+        else:
+            health_status['issues'].append('Database not found')
+            health_status['pipeline_status'] = 'unhealthy'
+        
+        # Set overall status
+        if len(health_status['issues']) > 3:
+            health_status['pipeline_status'] = 'unhealthy'
+        elif len(health_status['issues']) > 0:
+            health_status['pipeline_status'] = 'degraded'
+        
+        # Save health report
+        with open('data/health_status.json', 'w') as f:
+            json.dump(health_status, f, indent=2)
+        
+        print(f"🏥 Pipeline Health Check Complete")
+        print(f"   Status: {health_status['pipeline_status'].upper()}")
+        print(f"   Issues: {len(health_status['issues'])}")
+        
+        for issue in health_status['issues']:
+            print(f"   ⚠️ {issue}")
+        
+        # Discord notification für unhealthy status
+        if health_status['pipeline_status'] == 'unhealthy':
+            webhook_url = os.getenv('DISCORD_WEBHOOK_URL')
+            if webhook_url:
+                embed = {
+                    "title": "🚨 Pipeline Health Alert",
+                    "description": f"Pipeline status: **{health_status['pipeline_status'].upper()}**",
+                    "color": 0xff0000,
+                    "fields": [
+                        {
+                            "name": "Issues Detected",
+                            "value": "\n".join([f"• {issue}" for issue in health_status['issues'][:5]]),
+                            "inline": False
+                        }
+                    ],
+                    "timestamp": health_status['timestamp']
+                }
+                
+                if health_status['recommendations']:
+                    embed['fields'].append({
+                        "name": "Recommendations",
+                        "value": "\n".join([f"• {rec}" for rec in health_status['recommendations'][:3]]),
+                        "inline": False
+                    })
+                
+                try:
+                    import requests
+                    requests.post(webhook_url, json={"embeds": [embed]})
+                except:
+                    pass
+        
+        # Exit with error code if unhealthy
+        if health_status['pipeline_status'] == 'unhealthy':
+            exit(1)
+        EOF
+      env:
+        DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        
+    - name: Commit Health Status
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        git add data/health_status.json
+        git commit -m "🏥 Update pipeline health status" || exit 0
+        git push
+                    "fields": [
+                        {
+                            "name": "Jobs Completed",
+                            "value": "\n".join(processed_jobs[:5]),
+                            "inline": True
+                        }
+                    ],
+                    "timestamp": datetime.now().isoformat()
+                }
+                
+                try:
+                    requests.post(webhook_url, json={"embeds": [embed]})
+                except:
+                    pass
+        else:
+            print("ℹ️ No jobs ready for processing")
+        EOF
+      env:
+        API_FOOTBALL_KEY: ${{ secrets.API_FOOTBALL_KEY }}
+        ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
+        DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        
+    - name: Commit Results
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        git add .
+        git commit -m "📊 Process data collection jobs" || exit 0
+        git push
+
   daily-maintenance:
     if: contains(github.event.schedule, '0 8 * * *')
     runs-on: ubuntu-latest
@@ -1308,539 +1488,6 @@ jobs:
         EOF
       env:
         DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
-
-    - name: Commit Reports
-      run: |
-        git config --local user.email "action@github.com"
-        git config --local user.name "GitHub Action"
-        git add data/
-        git commit -m "📋 Generate weekly reports and dashboard data" || exit 0
-        git push
-
-  error-notification:
-    if: failure()
-    needs: [create-jobs, process-jobs, daily-maintenance]
-    runs-on: ubuntu-latest
-    
-    steps:
-    - name: Notify Discord on Failure
-      run: |
-        webhook_url="${{ secrets.DISCORD_WEBHOOK_URL }}"
-        if [ ! -z "$webhook_url" ]; then
-          curl -H "Content-Type: application/json" -X POST -d '{
-            "embeds": [{
-              "title": "❌ Pipeline Error",
-              "description": "Football data collection pipeline encountered an error",
-              "color": 16711680,
-              "fields": [
-                {
-                  "name": "Repository",
-                  "value": "${{ github.repository }}",
-                  "inline": true
-                },
-                {
-                  "name": "Workflow",
-                  "value": "${{ github.workflow }}",
-                  "inline": true
-                },
-                {
-                  "name": "Run ID",
-                  "value": "[#${{ github.run_number }}](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})",
-                  "inline": true
-                },
-                {
-                  "name": "Job Failed",
-                  "value": "${{ github.job }}",
-                  "inline": true
-                },
-                {
-                  "name": "Timestamp",
-                  "value": "'$(date -u +%Y-%m-%dT%H:%M:%S.000Z)'",
-                  "inline": true
-                }
-              ],
-              "footer": {
-                "text": "Check GitHub Actions for detailed error logs"
-              }
-            }]
-          }' "$webhook_url"
-        fi
-
-  health-check:
-    runs-on: ubuntu-latest
-    needs: [process-jobs]
-    if: always()
-    
-    steps:
-    - uses: actions/checkout@v4
-    
-    - name: Pipeline Health Check
-      run: |
-        python << 'EOF'
-        import json
-        import os
-        from datetime import datetime, timedelta
-        
-        health_status = {
-            'timestamp': datetime.now().isoformat(),
-            'pipeline_status': 'healthy',
-            'issues': [],
-            'recommendations': []
-        }
-        
-        # Check jobs.json
-        try:
-            with open('jobs.json', 'r') as f:
-                jobs = json.load(f)
-            
-            pending_jobs = [j for j in jobs if j['status'] == 'pending']
-            failed_jobs = [j for j in jobs if j['status'] == 'failed']
-            expired_jobs = [j for j in jobs if j['status'] == 'expired']
-            completed_jobs = [j for j in jobs if j['status'] == 'completed']
-            
-            # Health indicators
-            if len(failed_jobs) > len(completed_jobs) * 0.2:  # >20% failure rate
-                health_status['issues'].append('High job failure rate')
-                health_status['pipeline_status'] = 'degraded'
-            
-            if len(expired_jobs) > 10:
-                health_status['issues'].append('Many expired jobs - possible scheduling issues')
-                health_status['recommendations'].append('Check API rate limits and processing capacity')
-            
-            if len(pending_jobs) > 50:
-                health_status['issues'].append('Large job backlog')
-                health_status['recommendations'].append('Consider increasing processing frequency')
-            
-            # Check recent activity (last 24h)
-            yesterday = datetime.now() - timedelta(hours=24)
-            recent_jobs = [j for j in jobs if j.get('processed_at', '1970-01-01') >= yesterday.isoformat()]
-            
-            if len(recent_jobs) == 0:
-                health_status['issues'].append('No recent job activity')
-                health_status['pipeline_status'] = 'unhealthy'
-            
-        except FileNotFoundError:
-            health_status['issues'].append('jobs.json not found')
-            health_status['pipeline_status'] = 'unhealthy'
-        except Exception as e:
-            health_status['issues'].append(f'Job analysis failed: {e}')
-        
-        # Check database
-        if os.path.exists('data/football_data.db'):
-            try:
-                import sqlite3
-                conn = sqlite3.connect('data/football_data.db')
-                
-                # Check recent data
-                cursor = conn.execute("SELECT COUNT(*) FROM odds_history WHERE collected_at >= datetime('now', '-24 hours')")
-                recent_odds = cursor.fetchone()[0]
-                
-                cursor = conn.execute("SELECT COUNT(*) FROM fixtures WHERE kickoff_utc > datetime('now')")
-                future_fixtures = cursor.fetchone()[0]
-                
-                if recent_odds == 0:
-                    health_status['issues'].append('No recent odds data collected')
-                
-                if future_fixtures == 0:
-                    health_status['issues'].append('No upcoming fixtures found')
-                
-                conn.close()
-                
-            except Exception as e:
-                health_status['issues'].append(f'Database check failed: {e}')
-        else:
-            health_status['issues'].append('Database not found')
-            health_status['pipeline_status'] = 'unhealthy'
-        
-        # Set overall status
-        if len(health_status['issues']) > 3:
-            health_status['pipeline_status'] = 'unhealthy'
-        elif len(health_status['issues']) > 0:
-            health_status['pipeline_status'] = 'degraded'
-        
-        # Save health report
-        with open('data/health_status.json', 'w') as f:
-            json.dump(health_status, f, indent=2)
-        
-        print(f"🏥 Pipeline Health Check Complete")
-        print(f"   Status: {health_status['pipeline_status'].upper()}")
-        print(f"   Issues: {len(health_status['issues'])}")
-        
-        for issue in health_status['issues']:
-            print(f"   ⚠️ {issue}")
-        
-        # Discord notification für unhealthy status
-        if health_status['pipeline_status'] == 'unhealthy':
-            webhook_url = os.getenv('DISCORD_WEBHOOK_URL')
-            if webhook_url:
-                embed = {
-                    "title": "🚨 Pipeline Health Alert",
-                    "description": f"Pipeline status: **{health_status['pipeline_status'].upper()}**",
-                    "color": 0xff0000,
-                    "fields": [
-                        {
-                            "name": "Issues Detected",
-                            "value": "\n".join([f"• {issue}" for issue in health_status['issues'][:5]]),
-                            "inline": False
-                        }
-                    ],
-                    "timestamp": health_status['timestamp']
-                }
-                
-                if health_status['recommendations']:
-                    embed['fields'].append({
-                        "name": "Recommendations",
-                        "value": "\n".join([f"• {rec}" for rec in health_status['recommendations'][:3]]),
-                        "inline": False
-                    })
-                
-                try:
-                    import requests
-                    requests.post(webhook_url, json={"embeds": [embed]})
-                except:
-                    pass
-        
-        # Exit with error code if unhealthy
-        if health_status['pipeline_status'] == 'unhealthy':
-            exit(1)
-        EOF
-      env:
-        DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
-        
-    - name: Commit Health Status
-      run: |
-        git config --local user.email "action@github.com"
-        git config --local user.name "GitHub Action"
-        git add data/health_status.json
-        git commit -m "🏥 Update pipeline health status" || exit 0
-        git push
-                    "fields": [
-                        {
-                            "name": "Jobs Completed",
-                            "value": "\n".join(processed_jobs[:5]),
-                            "inline": True
-                        }
-                    ],
-                    "timestamp": datetime.now().isoformat()
-                }
-                
-                try:
-                    requests.post(webhook_url, json={"embeds": [embed]})
-                except:
-                    pass
-        else:
-            print("ℹ️ No jobs ready for processing")
-        EOF
-      env:
-        API_FOOTBALL_KEY: ${{ secrets.API_FOOTBALL_KEY }}
-        ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
-        DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
-        
-    - name: Commit Results
-      run: |
-        git config --local user.email "action@github.com"
-        git config --local user.name "GitHub Action"
-        git add .
-        git commit -m "📊 Process data collection jobs" || exit 0
-        git push
-
-  daily-maintenance:
-    if: contains(github.event.schedule, '0 8 * * *')
-    runs-on: ubuntu-latest
-    needs: [create-jobs]
-    
-    steps:
-    - uses: actions/checkout@v4
-    
-    - name: Setup Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.11'
-        
-    - name: Database Maintenance
-      run: |
-        python << 'EOF'
-        import sqlite3
-        import os
-        from datetime import datetime, timedelta
-        
-        if os.path.exists('data/football_data.db'):
-            conn = sqlite3.connect('data/football_data.db')
-            
-            # Cleanup alte Daten (älter als 6 Monate)
-            cutoff_date = datetime.now() - timedelta(days=180)
-            
-            # Bereinige odds_history
-            cursor = conn.execute("""
-                DELETE FROM odds_history 
-                WHERE collected_at < ?
-            """, (cutoff_date,))
-            deleted_odds = cursor.rowcount
-            
-            # Bereinige team_events
-            cursor = conn.execute("""
-                DELETE FROM team_events 
-                WHERE detected_at < ? AND end_date < ?
-            """, (cutoff_date, datetime.now().date()))
-            deleted_events = cursor.rowcount
-            
-            # Vacuum für bessere Performance
-            conn.execute("VACUUM")
-            
-            # Statistiken
-            cursor = conn.execute("SELECT COUNT(*) FROM odds_history")
-            odds_count = cursor.fetchone()[0]
-            
-            cursor = conn.execute("SELECT COUNT(*) FROM fixtures")
-            fixtures_count = cursor.fetchone()[0]
-            
-            cursor = conn.execute("SELECT COUNT(*) FROM teams")
-            teams_count = cursor.fetchone()[0]
-            
-            conn.commit()
-            conn.close()
-            
-            print(f"🧹 Database maintenance completed")
-            print(f"🗑️ Deleted: {deleted_odds} old odds, {deleted_events} old events")
-            print(f"📊 Current: {odds_count} odds, {fixtures_count} fixtures, {teams_count} teams")
-        else:
-            print("⚠️ Database not found")
-        EOF
-    
-    - name: Generate Weekly Report
-      run: |
-        python << 'EOF'
-        import json
-        import sqlite3
-        import os
-        from datetime import datetime, timedelta
-        
-        if os.path.exists('data/football_data.db'):
-            conn = sqlite3.connect('data/football_data.db')
-            conn.row_factory = sqlite3.Row
-            
-            # Weekly Report
-            week_ago = datetime.now() - timedelta(days=7)
-            
-            # Odds collected last week
-            cursor = conn.execute("""
-                SELECT COUNT(*) as count FROM odds_history 
-                WHERE collected_at >= ?
-            """, (week_ago,))
-            weekly_odds = cursor.fetchone()[0]
-            
-            # Games with data
-            cursor = conn.execute("""
-                SELECT COUNT(DISTINCT fixture_id) as count FROM odds_history 
-                WHERE collected_at >= ?
-            """, (week_ago,))
-            weekly_games = cursor.fetchone()[0]
-            
-            # Top leagues by activity
-            cursor = conn.execute("""
-                SELECT l.name, COUNT(DISTINCT oh.fixture_id) as games
-                FROM odds_history oh
-                JOIN fixtures f ON oh.fixture_id = f.id
-                JOIN leagues l ON f.league_id = l.id
-                WHERE oh.collected_at >= ?
-                GROUP BY l.id, l.name
-                ORDER BY games DESC
-                LIMIT 5
-            """, (week_ago,))
-            top_leagues = cursor.fetchall()
-            
-            # Bookmaker distribution
-            cursor = conn.execute("""
-                SELECT bookmaker, COUNT(*) as records
-                FROM odds_history
-                WHERE collected_at >= ?
-                GROUP BY bookmaker
-                ORDER BY records DESC
-                LIMIT 10
-            """, (week_ago,))
-            bookmakers = cursor.fetchall()
-            
-            # Collection phases
-            cursor = conn.execute("""
-                SELECT collection_phase, COUNT(*) as records
-                FROM odds_history
-                WHERE collected_at >= ?
-                GROUP BY collection_phase
-                ORDER BY records DESC
-            """, (week_ago,))
-            phases = cursor.fetchall()
-            
-            report = {
-                'report_date': datetime.now().isoformat(),
-                'period': 'last_7_days',
-                'summary': {
-                    'odds_collected': weekly_odds,
-                    'games_tracked': weekly_games,
-                    'top_leagues': [{'name': row[0], 'games': row[1]} for row in top_leagues],
-                    'bookmakers': [{'name': row[0], 'records': row[1]} for row in bookmakers],
-                    'collection_phases': [{'phase': row[0], 'records': row[1]} for row in phases]
-                }
-            }
-            
-            with open('data/weekly_report.json', 'w') as f:
-                json.dump(report, f, indent=2)
-            
-            print(f"📋 Weekly Report Generated:")
-            print(f"   📊 {weekly_odds} odds records collected")
-            print(f"   ⚽ {weekly_games} games tracked")
-            if top_leagues:
-                print(f"   🏆 Top league: {top_leagues[0][0]} ({top_leagues[0][1]} games)")
-            
-            # Discord Weekly Report
-            webhook_url = os.getenv('DISCORD_WEBHOOK_URL')
-            if webhook_url:
-                embed = {
-                    "title": "📋 Weekly Football Data Report",
-                    "description": f"Data collection summary for the last 7 days",
-                    "color": 0x0099ff,
-                    "fields": [
-                        {
-                            "name": "📊 Data Collected",
-                            "value": f"**{weekly_odds:,}** odds records\n**{weekly_games}** games tracked",
-                            "inline": True
-                        },
-                        {
-                            "name": "🏆 Top Leagues",
-                            "value": "\n".join([f"• {league['name']}: {league['games']} games" for league in report['summary']['top_leagues'][:3]]),
-                            "inline": True
-                        },
-                        {
-                            "name": "📈 Collection Phases",
-                            "value": "\n".join([f"• {phase['phase']}: {phase['records']}" for phase in report['summary']['collection_phases']]),
-                            "inline": False
-                        }
-                    ],
-                    "timestamp": datetime.now().isoformat(),
-                    "footer": {
-                        "text": "Football Data Pipeline • Weekly Report"
-                    }
-                }
-                
-                try:
-                    requests.post(webhook_url, json={"embeds": [embed]})
-                    print("✅ Weekly report sent to Discord")
-                except Exception as e:
-                    print(f"⚠️ Discord report failed: {e}")
-            
-            conn.close()
-        else:
-            print("⚠️ Database not found for reporting")
-        EOF
-      env:
-        DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
-
-    - name: Generate Dashboard Data
-      run: |
-        python << 'EOF'
-        import sqlite3
-        import json
-        import os
-        from datetime import datetime, timedelta
-        
-        if os.path.exists('data/football_data.db'):
-            conn = sqlite3.connect('data/football_data.db')
-            conn.row_factory = sqlite3.Row
-            
-            dashboard_data = {}
-            
-            # Upcoming games with latest odds
-            upcoming = conn.execute("""
-                SELECT f.id, f.kickoff_utc, ht.name as home_team, at.name as away_team,
-                       l.name as league, l.country,
-                       oh.home_odds, oh.draw_odds, oh.away_odds, oh.bookmaker,
-                       oh.collected_at
-                FROM fixtures f
-                JOIN teams ht ON f.home_team_id = ht.id
-                JOIN teams at ON f.away_team_id = at.id  
-                JOIN leagues l ON f.league_id = l.id
-                LEFT JOIN (
-                    SELECT fixture_id, home_odds, draw_odds, away_odds, bookmaker, collected_at,
-                           ROW_NUMBER() OVER (PARTITION BY fixture_id ORDER BY collected_at DESC) as rn
-                    FROM odds_history WHERE market_type = 'h2h'
-                ) oh ON f.id = oh.fixture_id AND oh.rn = 1
-                WHERE f.kickoff_utc > datetime('now')
-                AND f.kickoff_utc < datetime('now', '+48 hours')
-                ORDER BY f.kickoff_utc
-                LIMIT 20
-            """).fetchall()
-            
-            dashboard_data['upcoming_games'] = [dict(row) for row in upcoming]
-            
-            # Recent odds movements
-            movements = conn.execute("""
-                WITH recent_odds AS (
-                    SELECT fixture_id, home_odds, away_odds, collected_at, bookmaker,
-                           LAG(home_odds) OVER (PARTITION BY fixture_id, bookmaker ORDER BY collected_at) as prev_home,
-                           LAG(away_odds) OVER (PARTITION BY fixture_id, bookmaker ORDER BY collected_at) as prev_away
-                    FROM odds_history 
-                    WHERE collected_at >= datetime('now', '-24 hours')
-                    AND market_type = 'h2h'
-                )
-                SELECT r.*, f.kickoff_utc, ht.name as home_team, at.name as away_team
-                FROM recent_odds r
-                JOIN fixtures f ON r.fixture_id = f.id
-                JOIN teams ht ON f.home_team_id = ht.id
-                JOIN teams at ON f.away_team_id = at.id
-                WHERE prev_home IS NOT NULL
-                AND (ABS(home_odds - prev_home) / prev_home > 0.1 
-                     OR ABS(away_odds - prev_away) / prev_away > 0.1)
-                ORDER BY r.collected_at DESC
-                LIMIT 10
-            """).fetchall()
-            
-            dashboard_data['odds_movements'] = [dict(row) for row in movements]
-            
-            # League statistics
-            league_stats = conn.execute("""
-                SELECT l.name, l.country, COUNT(DISTINCT f.id) as total_games,
-                       COUNT(DISTINCT oh.id) as odds_records
-                FROM leagues l
-                LEFT JOIN fixtures f ON l.id = f.league_id  
-                LEFT JOIN odds_history oh ON f.id = oh.fixture_id
-                WHERE f.kickoff_utc >= datetime('now', '-30 days')
-                GROUP BY l.id, l.name, l.country
-                ORDER BY total_games DESC
-            """).fetchall()
-            
-            dashboard_data['league_stats'] = [dict(row) for row in league_stats]
-            
-            # Team performance
-            team_performance = conn.execute("""
-                SELECT t.name, ts.win_percentage, ts.goals_for, ts.goals_against,
-                       ts.matches_played, l.name as league
-                FROM team_statistics ts
-                JOIN teams t ON ts.team_id = t.id
-                JOIN leagues l ON ts.league_id = l.id
-                WHERE ts.collection_date >= date('now', '-7 days')
-                AND ts.matches_played >= 5
-                ORDER BY ts.win_percentage DESC
-                LIMIT 20
-            """).fetchall()
-            
-            dashboard_data['top_teams'] = [dict(row) for row in team_performance]
-            
-            # Meta information
-            dashboard_data['last_updated'] = datetime.now().isoformat()
-            dashboard_data['stats'] = {
-                'total_fixtures': conn.execute("SELECT COUNT(*) FROM fixtures").fetchone()[0],
-                'total_odds_records': conn.execute("SELECT COUNT(*) FROM odds_history").fetchone()[0],
-                'active_leagues': len(dashboard_data['league_stats'])
-            }
-            
-            # Save dashboard data
-            with open('data/dashboard_data.json', 'w') as f:
-                json.dump(dashboard_data, f, indent=2)
-            
-            print(f"📊 Dashboard data generated with {len(dashboard_data['upcoming_games'])} games")
-            conn.close()
-        else:
-            print("⚠️ Database not found for dashboard")
-        EOF
 
     - name: Commit Reports
       run: |
