@@ -394,8 +394,39 @@ jobs:
         import sqlite3
         
         def store_fixture_data(collected_data, collection_type):
-            """Store collected data in database"""
+            """Enhanced fixture data storage with complete database integration"""
             try:
+                import sys
+                sys.path.append('.')
+                from database_integration import FootballDatabase
+                
+                # Initialize database connection
+                db = FootballDatabase('sqlite', {'database': 'data/football_data.db'})
+                
+                # Store using enhanced database integration
+                fixture_id = db.store_fixture_data(collected_data, collection_type)
+                
+                # Generate mapping report if this is final data collection
+                if collection_type == 'final_data':
+                    try:
+                        from enhanced_mapping import EnhancedTeamMapper
+                        mapper = EnhancedTeamMapper(db_path='data/football_data.db')
+                        mapping_report = mapper.get_mapping_report(days=1)
+                        
+                        # Save mapping report
+                        if mapping_report:
+                            with open('data/daily_mapping_report.json', 'w') as f:
+                                json.dump(mapping_report, f, indent=2)
+                            print(f"  📊 Mapping report generated: {mapping_report['overall_stats']['success_rate']:.1%} success rate")
+                    except Exception as e:
+                        print(f"  ⚠️ Mapping report generation failed: {e}")
+                
+                db.close()
+                return fixture_id
+                
+            except Exception as e:
+                print(f"  ❌ Enhanced database storage failed: {e}")
+                # Fallback to original storage logic
                 conn = sqlite3.connect('data/football_data.db')
                 fixture_id = collected_data['fixture_id']
                 game_info = collected_data['game_info']
@@ -460,10 +491,7 @@ jobs:
                 
                 conn.commit()
                 conn.close()
-                return True
-            except Exception as e:
-                print(f"Database storage error: {e}")
-                return False
+                return fixture_id
         
         def collect_game_data(job):
             """Sammelt Daten basierend auf Job-Typ"""
@@ -626,8 +654,21 @@ jobs:
                 return False
         
         def collect_odds_data(data, phase):
-            """Quoten von The Odds API sammeln"""
+            """Enhanced odds collection with intelligent team mapping"""
             try:
+                import sys
+                sys.path.append('.')
+                from enhanced_mapping import collect_odds_data_enhanced, EnhancedTeamMapper
+                
+                # Initialize enhanced mapper
+                mapper = EnhancedTeamMapper(db_path='data/football_data.db', learn_mappings=True)
+                
+                # Use enhanced collection
+                collect_odds_data_enhanced(data, phase, mapper)
+                
+            except ImportError as e:
+                print(f"  ⚠️ Enhanced mapping not available, using basic mapping: {e}")
+                # Fallback to original logic
                 odds_api_key = os.getenv('ODDS_API_KEY')
                 if not odds_api_key:
                     print("  ⚠️ No Odds API key configured")
@@ -1200,6 +1241,101 @@ jobs:
         
         else:
             print("⚠️ Database not found for API usage analytics")
+        EOF
+      env:
+        DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+
+    - name: Generate Daily Mapping Report
+      run: |
+        python << 'EOF'
+        import json
+        import os
+        from datetime import datetime
+
+        try:
+            import sys
+            sys.path.append('.')
+            from enhanced_mapping import EnhancedTeamMapper
+            
+            if os.path.exists('data/football_data.db'):
+                mapper = EnhancedTeamMapper(db_path='data/football_data.db')
+                report = mapper.get_mapping_report(days=1)  # Daily report
+                
+                if report:
+                    # Save the report
+                    with open('data/daily_mapping_report.json', 'w') as f:
+                        json.dump(report, f, indent=2)
+                    
+                    overall = report['overall_stats']
+                    print(f"📊 Daily Mapping Report Generated:")
+                    print(f"   🎯 Success Rate: {overall['success_rate']:.1%}")
+                    print(f"   📈 Total Attempts: {overall['total_attempts']}")
+                    print(f"   ⚡ Avg Confidence: {overall['avg_confidence']:.3f}")
+                    print(f"   🧠 Learned Mappings: {report['learned_mappings_count']}")
+                    
+                    # Discord notification for significant improvements or issues
+                    webhook_url = os.getenv('DISCORD_WEBHOOK_URL')
+                    if webhook_url and overall['total_attempts'] > 0:
+                        embed_color = 0x00ff00 if overall['success_rate'] > 0.8 else 0xffaa00 if overall['success_rate'] > 0.6 else 0xff0000
+                        
+                        embed = {
+                            "title": "🎯 Daily Team Mapping Report",
+                            "description": f"Enhanced mapping performance for {datetime.now().strftime('%Y-%m-%d')}",
+                            "color": embed_color,
+                            "fields": [
+                                {
+                                    "name": "📊 Overall Performance",
+                                    "value": f"**Success Rate**: {overall['success_rate']:.1%}\n**Attempts**: {overall['total_attempts']}\n**Avg Confidence**: {overall['avg_confidence']:.3f}",
+                                    "inline": True
+                                },
+                                {
+                                    "name": "🧠 Learning Progress", 
+                                    "value": f"**Learned Mappings**: {report['learned_mappings_count']}\n**Manual Mappings**: {report['manual_mappings_count']}\n**Total Knowledge**: {report['learned_mappings_count'] + report['manual_mappings_count']}",
+                                    "inline": True
+                                }
+                            ],
+                            "timestamp": datetime.now().isoformat()
+                        }
+                        
+                        # Add top performing strategies
+                        if report['strategy_performance']:
+                            top_strategies = sorted(report['strategy_performance'], 
+                                                  key=lambda x: x['success_rate'], reverse=True)[:3]
+                            strategy_text = "\n".join([
+                                f"• {strategy['strategy_used']}: {strategy['success_rate']:.1%} ({strategy['successes']}/{strategy['attempts']})"
+                                for strategy in top_strategies
+                            ])
+                            embed['fields'].append({
+                                "name": "🏆 Top Strategies",
+                                "value": strategy_text,
+                                "inline": False
+                            })
+                        
+                        # Add failed mappings if any
+                        if report['failed_mappings']:
+                            failed_count = len(report['failed_mappings'])
+                            embed['fields'].append({
+                                "name": "⚠️ Failed Mappings",
+                                "value": f"{failed_count} unique team names need attention",
+                                "inline": False
+                            })
+                        
+                        try:
+                            import requests
+                            requests.post(webhook_url, json={"embeds": [embed]})
+                            print("✅ Mapping report sent to Discord")
+                        except Exception as e:
+                            print(f"⚠️ Discord mapping report failed: {e}")
+                    
+                else:
+                    print("ℹ️ No mapping data available for reporting")
+            else:
+                print("⚠️ Database not found for mapping report")
+                
+        except ImportError:
+            print("⚠️ Enhanced mapping not available")
+        except Exception as e:
+            print(f"⚠️ Mapping report generation failed: {e}")
         EOF
       env:
         DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}

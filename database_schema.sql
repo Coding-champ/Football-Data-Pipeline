@@ -57,9 +57,7 @@ CREATE TABLE IF NOT EXISTS odds_history (
     total_points REAL,
     collected_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     collection_phase TEXT NOT NULL, -- 'early_odds', 'team_news', 'final_data'
-    FOREIGN KEY (fixture_id) REFERENCES fixtures(id),
-    INDEX idx_fixture_odds (fixture_id, market_type, collected_at),
-    INDEX idx_collection_phase (collection_phase, collected_at)
+    FOREIGN KEY (fixture_id) REFERENCES fixtures(id)
 );
 
 -- Team Statistics (für Performance-Analyse)
@@ -95,8 +93,7 @@ CREATE TABLE IF NOT EXISTS team_events (
     end_date DATE,
     detected_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     source TEXT, -- 'api', 'manual', 'news_scraping'
-    FOREIGN KEY (team_id) REFERENCES teams(id),
-    INDEX idx_team_events (team_id, event_type, start_date)
+    FOREIGN KEY (team_id) REFERENCES teams(id)
 );
 
 -- Players Table (optional, für detaillierte Analyse)
@@ -124,8 +121,7 @@ CREATE TABLE IF NOT EXISTS head_to_head (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (home_team_id) REFERENCES teams(id),
     FOREIGN KEY (away_team_id) REFERENCES teams(id),
-    FOREIGN KEY (fixture_id) REFERENCES fixtures(id),
-    INDEX idx_h2h (home_team_id, away_team_id, match_date)
+    FOREIGN KEY (fixture_id) REFERENCES fixtures(id)
 );
 
 -- Lineups Table (wenn verfügbar vor Spielen)
@@ -174,6 +170,10 @@ ORDER BY f.kickoff_utc;
 
 -- Index für Performance
 CREATE INDEX IF NOT EXISTS idx_fixtures_kickoff ON fixtures(kickoff_utc);
+CREATE INDEX IF NOT EXISTS idx_odds_fixture ON odds_history(fixture_id, market_type, collected_at);
 CREATE INDEX IF NOT EXISTS idx_odds_collected ON odds_history(collected_at);
+CREATE INDEX IF NOT EXISTS idx_odds_collection_phase ON odds_history(collection_phase, collected_at);
 CREATE INDEX IF NOT EXISTS idx_team_stats_date ON team_statistics(collection_date);
+CREATE INDEX IF NOT EXISTS idx_team_events ON team_events(team_id, event_type, start_date);
 CREATE INDEX IF NOT EXISTS idx_events_detected ON team_events(detected_at);
+CREATE INDEX IF NOT EXISTS idx_h2h ON head_to_head(home_team_id, away_team_id, match_date);
