@@ -542,8 +542,7 @@ if __name__ == "__main__":
         print("• Interactive commands (!fb games, !fb odds, !fb trends)")
         print("• Trend visualizations")
         print("• Team form analysis")
-        print("• GitHub Actions webhook integration").status = 'scheduled'
-            """).fetchall()
+        print("• GitHub Actions webhook integration")
             
             for game in upcoming:
                 await self.send_game_preview(game)
