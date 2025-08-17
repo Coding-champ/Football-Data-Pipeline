@@ -1,8 +1,7 @@
 {
-  "timestamp": "2025-08-17T15:40:47.176781",
+  "timestamp": "2025-08-17T16:26:11.308834",
   "pipeline_status": "degraded",
   "issues": [
-    "No recent job activity",
     "No recent odds data collected",
     "No upcoming fixtures found"
   ],
