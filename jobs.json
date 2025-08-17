@@ -53,7 +53,7 @@
     "id": "1390820_final_data",
     "fixture_id": 1390820,
     "scheduled_for": "2025-08-17T16:30:00+00:00",
-    "status": "pending",
+    "status": "completed",
     "type": "final_data",
     "priority": "high",
     "game_info": {
@@ -70,13 +70,14 @@
       "priority": "high",
       "timezone": "Europe/Madrid"
     },
-    "created_at": "2025-08-17T14:09:16.699487+00:00"
+    "created_at": "2025-08-17T14:09:16.699487+00:00",
+    "processed_at": "2025-08-17T17:01:44.641525+00:00"
   },
   {
     "id": "1390823_team_news",
     "fixture_id": 1390823,
     "scheduled_for": "2025-08-17T16:30:00+00:00",
-    "status": "pending",
+    "status": "completed",
     "type": "team_news",
     "priority": "high",
     "game_info": {
@@ -93,7 +94,8 @@
       "priority": "high",
       "timezone": "Europe/Madrid"
     },
-    "created_at": "2025-08-17T14:09:16.699499+00:00"
+    "created_at": "2025-08-17T14:09:16.699499+00:00",
+    "processed_at": "2025-08-17T17:01:44.641525+00:00"
   },
   {
     "id": "1390823_final_data",
