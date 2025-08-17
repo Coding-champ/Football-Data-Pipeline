@@ -250,7 +250,7 @@ jobs:
         
         jobs_path = os.path.join(os.path.dirname(__file__), 'jobs.json')
             with open(jobs_path, 'w') as f:
-                json.dump(all_jobs, f, indent=2)
+                json.dump(all_jobs, f)
         
         print(f"\n📊 Job Summary:")
         print(f"  📥 Existing: {len(active_jobs)}")
@@ -735,7 +735,7 @@ jobs:
         if processed_jobs or expired_jobs:
             jobs_path = os.path.join(os.path.dirname(__file__), 'jobs.json')
             with open(jobs_path, 'w') as f:
-                json.dump(jobs, f, indent=2)
+                json.dump(jobs, f)
             
             print(f"\n📊 Processing Summary:")
             print(f"✅ Completed: {len(processed_jobs)}")
