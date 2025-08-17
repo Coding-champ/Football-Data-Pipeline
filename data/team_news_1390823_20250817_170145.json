@@ -1,0 +1,1346 @@
+{
+  "fixture_id": 1390823,
+  "collection_type": "team_news",
+  "game_info": {
+    "fixture_id": 1390823,
+    "kickoff_utc": "2025-08-17T19:30:00+00:00",
+    "home_team": "Espanyol",
+    "away_team": "Atletico Madrid",
+    "home_team_id": 540,
+    "away_team_id": 530,
+    "league": "La Liga",
+    "league_id": 140,
+    "country": "Spain",
+    "venue": "RCDE Stadium",
+    "priority": "high",
+    "timezone": "Europe/Madrid"
+  },
+  "collected_at": "2025-08-17T17:01:45.313748",
+  "data": {
+    "odds_team_news": {
+      "id": "0595f56cfe72699dc094ca05733d7b92",
+      "sport_key": "soccer_spain_la_liga",
+      "sport_title": "La Liga - Spain",
+      "commence_time": "2025-08-17T19:30:00Z",
+      "home_team": "Espanyol",
+      "away_team": "Atl\u00e9tico Madrid",
+      "bookmakers": [
+        {
+          "key": "sportsbet",
+          "title": "SportsBet",
+          "last_update": "2025-08-17T17:01:24Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2025-08-17T17:01:24Z",
+              "outcomes": [
+                {
+                  "name": "Atl\u00e9tico Madrid",
+                  "price": 1.57
+                },
+                {
+                  "name": "Espanyol",
+                  "price": 5.5
+                },
+                {
+                  "name": "Draw",
+                  "price": 3.8
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "winamax_de",
+          "title": "Winamax (DE)",
+          "last_update": "2025-08-17T17:01:29Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2025-08-17T17:01:29Z",
+              "outcomes": [
+                {
+                  "name": "Atl\u00e9tico Madrid",
+                  "price": 1.6
+                },
+                {
+                  "name": "Espanyol",
+                  "price": 5.8
+                },
+                {
+                  "name": "Draw",
+                  "price": 3.85
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "onexbet",
+          "title": "1xBet",
+          "last_update": "2025-08-17T17:01:23Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2025-08-17T17:01:23Z",
+              "outcomes": [
+                {
+                  "name": "Atl\u00e9tico Madrid",
+                  "price": 1.66
+                },
+                {
+                  "name": "Espanyol",
+                  "price": 5.71
+                },
+                {
+                  "name": "Draw",
+                  "price": 4.22
+                }
+              ]
+            },
+            {
+              "key": "spreads",
+              "last_update": "2025-08-17T17:01:23Z",
+              "outcomes": [
+                {
+                  "name": "Atl\u00e9tico Madrid",
+                  "price": 2.71,
+                  "point": -1.5
+                },
+                {
+                  "name": "Espanyol",
+                  "price": 1.43,
+                  "point": 1.5
+                }
+              ]
+            },
+            {
+              "key": "totals",
+              "last_update": "2025-08-17T17:01:23Z",
+              "outcomes": [
+                {
+                  "name": "Over",
+                  "price": 1.97,
+                  "point": 2.5
+                },
+                {
+                  "name": "Under",
+                  "price": 1.97,
+                  "point": 2.5
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "betclic_fr",
+          "title": "Betclic (FR)",
+          "last_update": "2025-08-17T17:01:31Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2025-08-17T17:01:31Z",
+              "outcomes": [
+                {
+                  "name": "Atl\u00e9tico Madrid",
+                  "price": 1.6
+                },
+                {
+                  "name": "Espanyol",
+                  "price": 5.75
+                },
+                {
+                  "name": "Draw",
+                  "price": 3.85
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "winamax_fr",
+          "title": "Winamax (FR)",
+          "last_update": "2025-08-17T17:01:27Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2025-08-17T17:01:27Z",
+              "outcomes": [
+                {
+                  "name": "Atl\u00e9tico Madrid",
+                  "price": 1.6
+                },
+                {
+                  "name": "Espanyol",
+                  "price": 5.8
+                },
+                {
+                  "name": "Draw",
+                  "price": 3.85
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "tipico_de",
+          "title": "Tipico",
+          "last_update": "2025-08-17T17:01:25Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2025-08-17T17:01:25Z",
+              "outcomes": [
+                {
+                  "name": "Atl\u00e9tico Madrid",
+                  "price": 1.6
+                },
+                {
+                  "name": "Espanyol",
+                  "price": 5.7
+                },
+                {
+                  "name": "Draw",
+                  "price": 4.0
+                }
+              ]
+            },
+            {
+              "key": "totals",
+              "last_update": "2025-08-17T17:01:25Z",
+              "outcomes": [
+                {
+                  "name": "Over",
+                  "price": 1.87,
+                  "point": 2.5
+                },
+                {
+                  "name": "Under",
+                  "price": 1.87,
+                  "point": 2.5
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "betfair_ex_au",
+          "title": "Betfair",
+          "last_update": "2025-08-17T17:01:27Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2025-08-17T17:01:27Z",
+              "outcomes": [
+                {
+                  "name": "Atl\u00e9tico Madrid",
+                  "price": 1.66
+                },
+                {
+                  "name": "Espanyol",
+                  "price": 6.2
+                },
+                {
+                  "name": "Draw",
+                  "price": 4.2
+                }
+              ]
+            },
+            {
+              "key": "h2h_lay",
+              "last_update": "2025-08-17T17:01:27Z",
+              "outcomes": [
+                {
+                  "name": "Atl\u00e9tico Madrid",
+                  "price": 1.67
+                },
+                {
+                  "name": "Espanyol",
+                  "price": 6.4
+                },
+                {
+                  "name": "Draw",
+                  "price": 4.3
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "williamhill",
+          "title": "William Hill",
+          "last_update": "2025-08-17T17:01:23Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2025-08-17T17:01:23Z",
+              "outcomes": [
+                {
+                  "name": "Atl\u00e9tico Madrid",
+                  "price": 1.6
+                },
+                {
+                  "name": "Espanyol",
+                  "price": 5.0
+                },
+                {
+                  "name": "Draw",
+                  "price": 3.9
+                }
+              ]
+            },
+            {
+              "key": "totals",
+              "last_update": "2025-08-17T17:01:23Z",
+              "outcomes": [
+                {
+                  "name": "Over",
+                  "price": 1.85,
+                  "point": 2.5
+                },
+                {
+                  "name": "Under",
+                  "price": 1.85,
+                  "point": 2.5
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "pinnacle",
+          "title": "Pinnacle",
+          "last_update": "2025-08-17T17:01:23Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2025-08-17T17:01:23Z",
+              "outcomes": [
+                {
+                  "name": "Atl\u00e9tico Madrid",
+                  "price": 1.64
+                },
+                {
+                  "name": "Espanyol",
+                  "price": 5.93
+                },
+                {
+                  "name": "Draw",
+                  "price": 3.99
+                }
+              ]
+            },
+            {
+              "key": "spreads",
+              "last_update": "2025-08-17T17:01:23Z",
+              "outcomes": [
+                {
+                  "name": "Atl\u00e9tico Madrid",
+                  "price": 1.82,
+                  "point": -0.75
+                },
+                {
+                  "name": "Espanyol",
+                  "price": 2.13,
+                  "point": 0.75
+                }
+              ]
+            },
+            {
+              "key": "totals",
+              "last_update": "2025-08-17T17:01:23Z",
+              "outcomes": [
+                {
+                  "name": "Over",
+                  "price": 1.93,
+                  "point": 2.5
+                },
+                {
+                  "name": "Under",
+                  "price": 1.98,
+                  "point": 2.5
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "draftkings",
+          "title": "DraftKings",
+          "last_update": "2025-08-17T17:01:25Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2025-08-17T17:01:25Z",
+              "outcomes": [
+                {
+                  "name": "Atl\u00e9tico Madrid",
+                  "price": 1.57
+                },
+                {
+                  "name": "Espanyol",
+                  "price": 5.25
+                },
+                {
+                  "name": "Draw",
+                  "price": 3.75
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "betfair_ex_eu",
+          "title": "Betfair",
+          "last_update": "2025-08-17T17:01:24Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2025-08-17T17:01:24Z",
+              "outcomes": [
+                {
+                  "name": "Atl\u00e9tico Madrid",
+                  "price": 1.66
+                },
+                {
+                  "name": "Espanyol",
+                  "price": 6.2
+                },
+                {
+                  "name": "Draw",
+                  "price": 4.2
+                }
+              ]
+            },
+            {
+              "key": "h2h_lay",
+              "last_update": "2025-08-17T17:01:24Z",
+              "outcomes": [
+                {
+                  "name": "Atl\u00e9tico Madrid",
+                  "price": 1.67
+                },
+                {
+                  "name": "Espanyol",
+                  "price": 6.4
+                },
+                {
+                  "name": "Draw",
+                  "price": 4.3
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "marathonbet",
+          "title": "Marathon Bet",
+          "last_update": "2025-08-17T17:01:24Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2025-08-17T17:01:24Z",
+              "outcomes": [
+                {
+                  "name": "Atl\u00e9tico Madrid",
+                  "price": 1.61
+                },
+                {
+                  "name": "Espanyol",
+                  "price": 5.55
+                },
+                {
+                  "name": "Draw",
+                  "price": 4.1
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "fanduel",
+          "title": "FanDuel",
+          "last_update": "2025-08-17T16:57:30Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2025-08-17T16:57:30Z",
+              "outcomes": [
+                {
+                  "name": "Atl\u00e9tico Madrid",
+                  "price": 1.59
+                },
+                {
+                  "name": "Espanyol",
+                  "price": 5.8
+                },
+                {
+                  "name": "Draw",
+                  "price": 3.9
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "betrivers",
+          "title": "BetRivers",
+          "last_update": "2025-08-17T17:01:24Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2025-08-17T17:01:24Z",
+              "outcomes": [
+                {
+                  "name": "Atl\u00e9tico Madrid",
+                  "price": 1.62
+                },
+                {
+                  "name": "Espanyol",
+                  "price": 5.8
+                },
+                {
+                  "name": "Draw",
+                  "price": 4.0
+                }
+              ]
+            },
+            {
+              "key": "totals",
+              "last_update": "2025-08-17T17:01:24Z",
+              "outcomes": [
+                {
+                  "name": "Over",
+                  "price": 2.0,
+                  "point": 2.5
+                },
+                {
+                  "name": "Under",
+                  "price": 1.83,
+                  "point": 2.5
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "unibet_it",
+          "title": "Unibet (IT)",
+          "last_update": "2025-08-17T17:01:25Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2025-08-17T17:01:25Z",
+              "outcomes": [
+                {
+                  "name": "Atl\u00e9tico Madrid",
+                  "price": 1.56
+                },
+                {
+                  "name": "Espanyol",
+                  "price": 5.75
+                },
+                {
+                  "name": "Draw",
+                  "price": 3.95
+                }
+              ]
+            },
+            {
+              "key": "totals",
+              "last_update": "2025-08-17T17:01:25Z",
+              "outcomes": [
+                {
+                  "name": "Over",
+                  "price": 1.95,
+                  "point": 2.5
+                },
+                {
+                  "name": "Under",
+                  "price": 1.8,
+                  "point": 2.5
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "unibet",
+          "title": "Unibet",
+          "last_update": "2025-08-17T17:01:23Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2025-08-17T17:01:23Z",
+              "outcomes": [
+                {
+                  "name": "Atl\u00e9tico Madrid",
+                  "price": 1.56
+                },
+                {
+                  "name": "Espanyol",
+                  "price": 5.75
+                },
+                {
+                  "name": "Draw",
+                  "price": 3.95
+                }
+              ]
+            },
+            {
+              "key": "totals",
+              "last_update": "2025-08-17T17:01:23Z",
+              "outcomes": [
+                {
+                  "name": "Over",
+                  "price": 1.95,
+                  "point": 2.5
+                },
+                {
+                  "name": "Under",
+                  "price": 1.8,
+                  "point": 2.5
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "unibet_nl",
+          "title": "Unibet (NL)",
+          "last_update": "2025-08-17T17:01:24Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2025-08-17T17:01:24Z",
+              "outcomes": [
+                {
+                  "name": "Atl\u00e9tico Madrid",
+                  "price": 1.62
+                },
+                {
+                  "name": "Espanyol",
+                  "price": 6.0
+                },
+                {
+                  "name": "Draw",
+                  "price": 4.1
+                }
+              ]
+            },
+            {
+              "key": "totals",
+              "last_update": "2025-08-17T17:01:24Z",
+              "outcomes": [
+                {
+                  "name": "Over",
+                  "price": 1.95,
+                  "point": 2.5
+                },
+                {
+                  "name": "Under",
+                  "price": 1.8,
+                  "point": 2.5
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "playup",
+          "title": "PlayUp",
+          "last_update": "2025-08-17T17:01:24Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2025-08-17T17:01:24Z",
+              "outcomes": [
+                {
+                  "name": "Atl\u00e9tico Madrid",
+                  "price": 1.63
+                },
+                {
+                  "name": "Espanyol",
+                  "price": 5.25
+                },
+                {
+                  "name": "Draw",
+                  "price": 3.85
+                }
+              ]
+            },
+            {
+              "key": "spreads",
+              "last_update": "2025-08-17T17:01:24Z",
+              "outcomes": [
+                {
+                  "name": "Atl\u00e9tico Madrid",
+                  "price": 2.7,
+                  "point": -1.5
+                },
+                {
+                  "name": "Espanyol",
+                  "price": 1.45,
+                  "point": 1.5
+                }
+              ]
+            },
+            {
+              "key": "totals",
+              "last_update": "2025-08-17T17:01:24Z",
+              "outcomes": [
+                {
+                  "name": "Over",
+                  "price": 1.85,
+                  "point": 2.5
+                },
+                {
+                  "name": "Under",
+                  "price": 1.93,
+                  "point": 2.5
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "tabtouch",
+          "title": "TABtouch",
+          "last_update": "2025-08-17T17:01:25Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2025-08-17T17:01:24Z",
+              "outcomes": [
+                {
+                  "name": "Atl\u00e9tico Madrid",
+                  "price": 1.56
+                },
+                {
+                  "name": "Espanyol",
+                  "price": 5.75
+                },
+                {
+                  "name": "Draw",
+                  "price": 3.95
+                }
+              ]
+            },
+            {
+              "key": "totals",
+              "last_update": "2025-08-17T17:01:24Z",
+              "outcomes": [
+                {
+                  "name": "Over",
+                  "price": 1.95,
+                  "point": 2.5
+                },
+                {
+                  "name": "Under",
+                  "price": 1.8,
+                  "point": 2.5
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "betsson",
+          "title": "Betsson",
+          "last_update": "2025-08-17T17:01:24Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2025-08-17T17:01:24Z",
+              "outcomes": [
+                {
+                  "name": "Atl\u00e9tico Madrid",
+                  "price": 1.65
+                },
+                {
+                  "name": "Espanyol",
+                  "price": 5.4
+                },
+                {
+                  "name": "Draw",
+                  "price": 3.95
+                }
+              ]
+            },
+            {
+              "key": "totals",
+              "last_update": "2025-08-17T17:01:24Z",
+              "outcomes": [
+                {
+                  "name": "Over",
+                  "price": 1.85,
+                  "point": 2.5
+                },
+                {
+                  "name": "Under",
+                  "price": 1.92,
+                  "point": 2.5
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "nordicbet",
+          "title": "Nordic Bet",
+          "last_update": "2025-08-17T17:01:24Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2025-08-17T17:01:24Z",
+              "outcomes": [
+                {
+                  "name": "Atl\u00e9tico Madrid",
+                  "price": 1.65
+                },
+                {
+                  "name": "Espanyol",
+                  "price": 5.4
+                },
+                {
+                  "name": "Draw",
+                  "price": 3.95
+                }
+              ]
+            },
+            {
+              "key": "totals",
+              "last_update": "2025-08-17T17:01:24Z",
+              "outcomes": [
+                {
+                  "name": "Over",
+                  "price": 1.85,
+                  "point": 2.5
+                },
+                {
+                  "name": "Under",
+                  "price": 1.92,
+                  "point": 2.5
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "coolbet",
+          "title": "Coolbet",
+          "last_update": "2025-08-17T17:01:24Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2025-08-17T17:01:24Z",
+              "outcomes": [
+                {
+                  "name": "Atl\u00e9tico Madrid",
+                  "price": 1.63
+                },
+                {
+                  "name": "Espanyol",
+                  "price": 6.0
+                },
+                {
+                  "name": "Draw",
+                  "price": 4.0
+                }
+              ]
+            },
+            {
+              "key": "totals",
+              "last_update": "2025-08-17T17:01:24Z",
+              "outcomes": [
+                {
+                  "name": "Over",
+                  "price": 1.97,
+                  "point": 2.5
+                },
+                {
+                  "name": "Under",
+                  "price": 1.87,
+                  "point": 2.5
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "everygame",
+          "title": "Everygame",
+          "last_update": "2025-08-17T17:01:25Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2025-08-17T17:01:25Z",
+              "outcomes": [
+                {
+                  "name": "Atl\u00e9tico Madrid",
+                  "price": 1.6
+                },
+                {
+                  "name": "Espanyol",
+                  "price": 5.75
+                },
+                {
+                  "name": "Draw",
+                  "price": 3.85
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "unibet_fr",
+          "title": "Unibet (FR)",
+          "last_update": "2025-08-17T17:01:24Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2025-08-17T17:01:24Z",
+              "outcomes": [
+                {
+                  "name": "Atl\u00e9tico Madrid",
+                  "price": 1.6
+                },
+                {
+                  "name": "Espanyol",
+                  "price": 5.8
+                },
+                {
+                  "name": "Draw",
+                  "price": 3.95
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "bovada",
+          "title": "Bovada",
+          "last_update": "2025-08-17T17:01:24Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2025-08-17T17:01:24Z",
+              "outcomes": [
+                {
+                  "name": "Atl\u00e9tico Madrid",
+                  "price": 1.61
+                },
+                {
+                  "name": "Espanyol",
+                  "price": 5.75
+                },
+                {
+                  "name": "Draw",
+                  "price": 3.9
+                }
+              ]
+            },
+            {
+              "key": "spreads",
+              "last_update": "2025-08-17T17:01:24Z",
+              "outcomes": [
+                {
+                  "name": "Atl\u00e9tico Madrid",
+                  "price": 1.78,
+                  "point": -0.75
+                },
+                {
+                  "name": "Espanyol",
+                  "price": 2.08,
+                  "point": 0.75
+                }
+              ]
+            },
+            {
+              "key": "totals",
+              "last_update": "2025-08-17T17:01:24Z",
+              "outcomes": [
+                {
+                  "name": "Over",
+                  "price": 1.89,
+                  "point": 2.5
+                },
+                {
+                  "name": "Under",
+                  "price": 1.93,
+                  "point": 2.5
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "ladbrokes_au",
+          "title": "Ladbrokes",
+          "last_update": "2025-08-17T17:01:27Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2025-08-17T17:01:27Z",
+              "outcomes": [
+                {
+                  "name": "Atl\u00e9tico Madrid",
+                  "price": 1.62
+                },
+                {
+                  "name": "Espanyol",
+                  "price": 5.4
+                },
+                {
+                  "name": "Draw",
+                  "price": 3.75
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "neds",
+          "title": "Neds",
+          "last_update": "2025-08-17T17:01:25Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2025-08-17T17:01:25Z",
+              "outcomes": [
+                {
+                  "name": "Atl\u00e9tico Madrid",
+                  "price": 1.62
+                },
+                {
+                  "name": "Espanyol",
+                  "price": 5.4
+                },
+                {
+                  "name": "Draw",
+                  "price": 3.75
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "betonlineag",
+          "title": "BetOnline.ag",
+          "last_update": "2025-08-17T17:01:23Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2025-08-17T17:01:23Z",
+              "outcomes": [
+                {
+                  "name": "Atl\u00e9tico Madrid",
+                  "price": 1.64
+                },
+                {
+                  "name": "Espanyol",
+                  "price": 5.95
+                },
+                {
+                  "name": "Draw",
+                  "price": 3.9
+                }
+              ]
+            },
+            {
+              "key": "spreads",
+              "last_update": "2025-08-17T17:01:23Z",
+              "outcomes": [
+                {
+                  "name": "Atl\u00e9tico Madrid",
+                  "price": 1.8,
+                  "point": -0.75
+                },
+                {
+                  "name": "Espanyol",
+                  "price": 2.05,
+                  "point": 0.75
+                }
+              ]
+            },
+            {
+              "key": "totals",
+              "last_update": "2025-08-17T17:01:23Z",
+              "outcomes": [
+                {
+                  "name": "Over",
+                  "price": 1.88,
+                  "point": 2.5
+                },
+                {
+                  "name": "Under",
+                  "price": 1.93,
+                  "point": 2.5
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "lowvig",
+          "title": "LowVig.ag",
+          "last_update": "2025-08-17T17:01:23Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2025-08-17T17:01:23Z",
+              "outcomes": [
+                {
+                  "name": "Atl\u00e9tico Madrid",
+                  "price": 1.64
+                },
+                {
+                  "name": "Espanyol",
+                  "price": 5.95
+                },
+                {
+                  "name": "Draw",
+                  "price": 3.9
+                }
+              ]
+            },
+            {
+              "key": "spreads",
+              "last_update": "2025-08-17T17:01:23Z",
+              "outcomes": [
+                {
+                  "name": "Atl\u00e9tico Madrid",
+                  "price": 1.8,
+                  "point": -0.75
+                },
+                {
+                  "name": "Espanyol",
+                  "price": 2.05,
+                  "point": 0.75
+                }
+              ]
+            },
+            {
+              "key": "totals",
+              "last_update": "2025-08-17T17:01:23Z",
+              "outcomes": [
+                {
+                  "name": "Over",
+                  "price": 1.88,
+                  "point": 2.5
+                },
+                {
+                  "name": "Under",
+                  "price": 1.93,
+                  "point": 2.5
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "betus",
+          "title": "BetUS",
+          "last_update": "2025-08-17T17:01:24Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2025-08-17T17:01:24Z",
+              "outcomes": [
+                {
+                  "name": "Atl\u00e9tico Madrid",
+                  "price": 1.62
+                },
+                {
+                  "name": "Espanyol",
+                  "price": 5.75
+                },
+                {
+                  "name": "Draw",
+                  "price": 3.9
+                }
+              ]
+            },
+            {
+              "key": "spreads",
+              "last_update": "2025-08-17T17:01:24Z",
+              "outcomes": [
+                {
+                  "name": "Atl\u00e9tico Madrid",
+                  "price": 2.1,
+                  "point": -1.0
+                },
+                {
+                  "name": "Espanyol",
+                  "price": 1.77,
+                  "point": 1.0
+                }
+              ]
+            },
+            {
+              "key": "totals",
+              "last_update": "2025-08-17T17:01:24Z",
+              "outcomes": [
+                {
+                  "name": "Over",
+                  "price": 1.91,
+                  "point": 2.5
+                },
+                {
+                  "name": "Under",
+                  "price": 1.92,
+                  "point": 2.5
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "betr_au",
+          "title": "Betr",
+          "last_update": "2025-08-17T17:01:26Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2025-08-17T17:01:26Z",
+              "outcomes": [
+                {
+                  "name": "Atl\u00e9tico Madrid",
+                  "price": 1.6
+                },
+                {
+                  "name": "Espanyol",
+                  "price": 5.5
+                },
+                {
+                  "name": "Draw",
+                  "price": 3.8
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "betright",
+          "title": "Bet Right",
+          "last_update": "2025-08-17T17:01:25Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2025-08-17T17:01:25Z",
+              "outcomes": [
+                {
+                  "name": "Atl\u00e9tico Madrid",
+                  "price": 1.58
+                },
+                {
+                  "name": "Espanyol",
+                  "price": 5.5
+                },
+                {
+                  "name": "Draw",
+                  "price": 3.8
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "matchbook",
+          "title": "Matchbook",
+          "last_update": "2025-08-17T17:01:23Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2025-08-17T17:01:23Z",
+              "outcomes": [
+                {
+                  "name": "Atl\u00e9tico Madrid",
+                  "price": 1.66
+                },
+                {
+                  "name": "Espanyol",
+                  "price": 6.2
+                },
+                {
+                  "name": "Draw",
+                  "price": 4.2
+                }
+              ]
+            },
+            {
+              "key": "h2h_lay",
+              "last_update": "2025-08-17T17:01:23Z",
+              "outcomes": [
+                {
+                  "name": "Atl\u00e9tico Madrid",
+                  "price": 1.67
+                },
+                {
+                  "name": "Espanyol",
+                  "price": 6.4
+                },
+                {
+                  "name": "Draw",
+                  "price": 4.3
+                }
+              ]
+            },
+            {
+              "key": "spreads",
+              "last_update": "2025-08-17T17:01:23Z",
+              "outcomes": [
+                {
+                  "name": "Atl\u00e9tico Madrid",
+                  "price": 2.16,
+                  "point": -1.0
+                },
+                {
+                  "name": "Espanyol",
+                  "price": 1.83,
+                  "point": 1.0
+                }
+              ]
+            },
+            {
+              "key": "totals",
+              "last_update": "2025-08-17T17:01:23Z",
+              "outcomes": [
+                {
+                  "name": "Over",
+                  "price": 2.0,
+                  "point": 2.5
+                },
+                {
+                  "name": "Under",
+                  "price": 1.99,
+                  "point": 2.5
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "_mapping_metadata": {
+        "home_mapping": {
+          "api_football_name": "Espanyol",
+          "odds_api_name": "Espanyol",
+          "confidence": 1.0,
+          "strategy_used": "exact_match",
+          "match_found": true,
+          "alternatives": [],
+          "processing_time": 9e-06
+        },
+        "away_mapping": {
+          "api_football_name": "Atletico Madrid",
+          "odds_api_name": "Atl\u00e9tico Madrid",
+          "confidence": 0.85,
+          "strategy_used": "normalized_matching",
+          "match_found": true,
+          "alternatives": [],
+          "processing_time": 0.001873
+        }
+      }
+    }
+  }
+}
