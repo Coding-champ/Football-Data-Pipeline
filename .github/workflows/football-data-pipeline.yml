@@ -132,7 +132,7 @@ jobs:
             
             for date in [today, tomorrow, day_after]:
                 url = "https://v3.football.api-sports.io/fixtures"
-                params = {'league': league_id, 'date': date, 'status': 'NS'}
+                params = {'league': league_id, 'date': date, 'season': 2025, 'status': 'NS'}
                 
                 try:
                     response = requests.get(url, headers=headers, params=params, timeout=15)
@@ -288,7 +288,7 @@ jobs:
         git push
 
   process-jobs:
-    if: contains(github.event.schedule, '*/30 * * * *') || github.event_name == 'workflow_dispatch'
+    if: contains(github.event.schedule, '*/180 * * * *') || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     
     steps:
