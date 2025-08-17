@@ -37,13 +37,10 @@ class FootballDashboard:
         except Exception as e:
             st.error(f"Database connection failed: {e}")
     
-    def execute_query(self, query: str, params: tuple = None) -> pd.DataFrame:
-        """Execute query and return DataFrame"""
-        try:
-            return pd.read_sql_query(query, self.conn, params=params)
-        except Exception as e:
-            st.error(f"Query failed: {e}")
-            return pd.DataFrame()
+    def execute_query(self, query, params: tuple = None) -> pd.DataFrame:
+        with sqlite3.connect(self.database_path) as conn:
+            conn.row_factory = sqlite3.Row
+            return pd.read_sql_query(query, conn, params=params)
     
     def get_leagues(self) -> pd.DataFrame:
         """Get available leagues"""

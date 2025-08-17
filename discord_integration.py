@@ -32,24 +32,24 @@ import base64
 
 if DISCORD_AVAILABLE:
     class FootballDiscordBot(commands.Bot):
-    def __init__(self, database_path: str):
-        intents = discord.Intents.default()
-        intents.message_content = True
-        super().__init__(command_prefix='!fb ', intents=intents)
+        def __init__(self, database_path: str):
+            intents = discord.Intents.default()
+            intents.message_content = True
+            super().__init__(command_prefix='!fb ', intents=intents)
+            
+            self.database_path = database_path
+            self.notification_channels = {}  # Guild ID -> Channel ID mapping
+            self.user_subscriptions = {}     # User ID -> subscription preferences
+            
+        async def on_ready(self):
+            print(f'🤖 {self.user} is connected to Discord!')
+            await self.setup_scheduled_tasks()
         
-        self.database_path = database_path
-        self.notification_channels = {}  # Guild ID -> Channel ID mapping
-        self.user_subscriptions = {}     # User ID -> subscription preferences
-        
-    async def on_ready(self):
-        print(f'🤖 {self.user} is connected to Discord!')
-        await self.setup_scheduled_tasks()
-    
-    async def setup_scheduled_tasks(self):
-        """Start background tasks"""
-        self.check_upcoming_games.start()
-        self.odds_movement_alerts.start()
-        self.injury_notifications.start()
+        async def setup_scheduled_tasks(self):
+            """Start background tasks"""
+            self.check_upcoming_games.start()
+            self.odds_movement_alerts.start()
+            self.injury_notifications.start()
 
 # =============================================================================
 # NOTIFICATION FEATURES
