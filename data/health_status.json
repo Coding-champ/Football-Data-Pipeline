@@ -1,6 +1,8 @@
 {
-  "timestamp": "2025-08-17T19:17:06.872267",
-  "pipeline_status": "healthy",
-  "issues": [],
+  "timestamp": "2025-08-17T19:38:13.677029",
+  "pipeline_status": "degraded",
+  "issues": [
+    "No upcoming fixtures found"
+  ],
   "recommendations": []
 }
