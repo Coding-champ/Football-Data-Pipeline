@@ -225,7 +225,7 @@ jobs:
         
         # Merge mit existierenden Jobs
         try:
-            with open('jobs.json', 'r') as f:
+            with open('../jobs.json', 'r') as f:
                 existing_jobs = json.load(f)
         except FileNotFoundError:
             existing_jobs = []
@@ -247,7 +247,7 @@ jobs:
         all_jobs = active_jobs + new_jobs
         all_jobs.sort(key=lambda x: x['scheduled_for'])
         
-        with open('jobs.json', 'w') as f:
+        with open('../jobs.json', 'w') as f:
             json.dump(all_jobs, f, indent=2)
         
         print(f"\n📊 Job Summary:")
@@ -285,6 +285,7 @@ jobs:
         git config --local user.name "GitHub Action"
         git add .
         git commit -m "🔄 Update job queue and database" || exit 0
+        git pull --rebase
         git push
 
   process-jobs:
@@ -681,7 +682,7 @@ jobs:
         
         # Job Processing Hauptlogik
         try:
-            with open('jobs.json', 'r') as f:
+            with open('../jobs.json', 'r') as f:
                 jobs = json.load(f)
         except FileNotFoundError:
             print("❌ No jobs file found")
@@ -729,7 +730,7 @@ jobs:
         
         # Aktualisiere jobs.json
         if processed_jobs or expired_jobs:
-            with open('jobs.json', 'w') as f:
+            with open('../jobs.json', 'w') as f:
                 json.dump(jobs, f, indent=2)
             
             print(f"\n📊 Processing Summary:")
@@ -770,6 +771,7 @@ jobs:
         git config --local user.name "GitHub Action"
         git add .
         git commit -m "📊 Process data collection jobs" || exit 0
+        git pull --rebase
         git push
 
 
@@ -798,7 +800,7 @@ jobs:
         
         # Check jobs.json
         try:
-            with open('jobs.json', 'r') as f:
+            with open('../jobs.json', 'r') as f:
                 jobs = json.load(f)
             
             pending_jobs = [j for j in jobs if j['status'] == 'pending']
@@ -921,6 +923,7 @@ jobs:
         git config --local user.name "GitHub Action"
         git add data/health_status.json
         git commit -m "🏥 Update pipeline health status" || exit 0
+        git pull --rebase
         git push
       env:
         API_FOOTBALL_KEY: ${{ secrets.API_FOOTBALL_KEY }}
@@ -933,6 +936,7 @@ jobs:
         git config --local user.name "GitHub Action"
         git add .
         git commit -m "📊 Process data collection jobs" || exit 0
+        git pull --rebase
         git push
 
   daily-maintenance:
@@ -1250,7 +1254,7 @@ jobs:
             
             # Anzahl der API-Calls schätzen basierend auf Jobs
             try:
-                with open('jobs.json', 'r') as f:
+                with open('../jobs.json', 'r') as f:
                     jobs = json.load(f)
                 
                 completed_jobs = [job for job in jobs if job['status'] == 'completed' and 
@@ -1461,6 +1465,7 @@ jobs:
         git config --local user.name "GitHub Action"
         git add data/
         git commit -m "📋 Generate weekly reports and dashboard data" || exit 0
+        git pull --rebase
         git push
 
   error-notification:
