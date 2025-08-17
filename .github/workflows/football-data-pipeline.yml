@@ -116,8 +116,8 @@ jobs:
             print(f"🎯 Focusing on specific league: {league_id}")
         
         headers = {
-            'X-RapidAPI-Key': os.getenv('API_FOOTBALL_KEY'),
-            'X-RapidAPI-Host': 'api-football-v1.p.rapidapi.com'
+            'x-rapidapi-key': os.getenv('API_FOOTBALL_KEY'),
+            'x-rapidapi-host': 'v3.football.api-sports.io'
         }
         
         upcoming_games = []
@@ -131,7 +131,7 @@ jobs:
             print(f"\n📊 Checking {config['name']}...")
             
             for date in [today, tomorrow, day_after]:
-                url = "https://api-football-v1.p.rapidapi.com/v3/fixtures"
+                url = "https://v3.football.api-sports.io/fixtures"
                 params = {'league': league_id, 'date': date, 'status': 'NS'}
                 
                 try:
@@ -456,8 +456,8 @@ jobs:
                 }
                 
                 api_football_headers = {
-                    'X-RapidAPI-Key': os.getenv('API_FOOTBALL_KEY'),
-                    'X-RapidAPI-Host': 'api-football-v1.p.rapidapi.com'
+                    'X-rapidAPI-Key': os.getenv('API_FOOTBALL_KEY'),
+                    'X-rapidAPI-Host': 'v3.football.api-sports.io'
                 }
                 
                 success = False
@@ -503,7 +503,7 @@ jobs:
                 fixture_id = data['fixture_id']
                 
                 # Fixture Details
-                fixture_url = f"https://api-football-v1.p.rapidapi.com/v3/fixtures"
+                fixture_url = f"https://v3.football.api-sports.io/fixtures"
                 fixture_params = {'id': fixture_id}
                 
                 response = requests.get(fixture_url, headers=headers, params=fixture_params, timeout=15)
@@ -526,7 +526,7 @@ jobs:
                 
                 # Team Statistics
                 for team_id, team_type in [(game_info['home_team_id'], 'home'), (game_info['away_team_id'], 'away')]:
-                    stats_url = f"https://api-football-v1.p.rapidapi.com/v3/teams/statistics"
+                    stats_url = f"https://v3.football.api-sports.io/teams/statistics"
                     current_season = datetime.now().year if datetime.now().month >= 8 else datetime.now().year - 1
                     
                     stats_params = {
@@ -541,7 +541,7 @@ jobs:
                         print(f"  ✅ {team_type.title()} team stats collected")
                 
                 # Head-to-Head
-                h2h_url = f"https://api-football-v1.p.rapidapi.com/v3/fixtures/headtohead"
+                h2h_url = f"https://v3.football.api-sports.io/fixtures/headtohead"
                 h2h_params = {
                     'h2h': f"{game_info['home_team_id']}-{game_info['away_team_id']}",
                     'last': 10
@@ -576,7 +576,7 @@ jobs:
                 fixture_id = data['fixture_id']
                 
                 # Lineups
-                lineups_url = f"https://api-football-v1.p.rapidapi.com/v3/fixtures/lineups"
+                lineups_url = f"https://v3.football.api-sports.io/fixtures/lineups"
                 lineups_params = {'fixture': fixture_id}
                 
                 response = requests.get(lineups_url, headers=headers, params=lineups_params, timeout=15)
