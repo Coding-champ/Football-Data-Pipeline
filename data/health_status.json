@@ -1,5 +1,5 @@
 {
-  "timestamp": "2025-08-17T16:42:58.682168",
+  "timestamp": "2025-08-17T16:47:36.446738",
   "pipeline_status": "degraded",
   "issues": [
     "jobs.json not found",
