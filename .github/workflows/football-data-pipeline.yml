@@ -249,8 +249,8 @@ jobs:
         all_jobs.sort(key=lambda x: x['scheduled_for'])
         
         jobs_path = os.path.join(os.path.dirname(__file__), 'jobs.json')
-            with open(jobs_path, 'w') as f:
-                json.dump(all_jobs, f)
+        with open(jobs_path, 'w') as f:
+            json.dump(all_jobs, f)
         
         print(f"\n📊 Job Summary:")
         print(f"  📥 Existing: {len(active_jobs)}")
