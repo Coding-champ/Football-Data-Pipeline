@@ -1,0 +1,1479 @@
+{
+  "fixture_id": 1390826,
+  "collection_type": "early_odds",
+  "game_info": {
+    "fixture_id": 1390826,
+    "kickoff_utc": "2025-08-19T19:00:00+00:00",
+    "home_team": "Real Madrid",
+    "away_team": "Osasuna",
+    "home_team_id": 541,
+    "away_team_id": 727,
+    "league": "La Liga",
+    "league_id": 140,
+    "country": "Spain",
+    "venue": "Estadio Santiago Bernab\u00e9u",
+    "priority": "high",
+    "timezone": "Europe/Madrid"
+  },
+  "collected_at": "2025-08-18T19:08:17.859064",
+  "data": {
+    "fixture_details": {
+      "get": "fixtures",
+      "parameters": {
+        "id": "1390826"
+      },
+      "errors": [],
+      "results": 1,
+      "paging": {
+        "current": 1,
+        "total": 1
+      },
+      "response": [
+        {
+          "fixture": {
+            "id": 1390826,
+            "referee": null,
+            "timezone": "UTC",
+            "date": "2025-08-19T19:00:00+00:00",
+            "timestamp": 1755630000,
+            "periods": {
+              "first": null,
+              "second": null
+            },
+            "venue": {
+              "id": 1456,
+              "name": "Estadio Santiago Bernab\u00e9u",
+              "city": "Madrid"
+            },
+            "status": {
+              "long": "Not Started",
+              "short": "NS",
+              "elapsed": null,
+              "extra": null
+            }
+          },
+          "league": {
+            "id": 140,
+            "name": "La Liga",
+            "country": "Spain",
+            "logo": "https://media.api-sports.io/football/leagues/140.png",
+            "flag": "https://media.api-sports.io/flags/es.svg",
+            "season": 2025,
+            "round": "Regular Season - 1",
+            "standings": true
+          },
+          "teams": {
+            "home": {
+              "id": 541,
+              "name": "Real Madrid",
+              "logo": "https://media.api-sports.io/football/teams/541.png",
+              "winner": null
+            },
+            "away": {
+              "id": 727,
+              "name": "Osasuna",
+              "logo": "https://media.api-sports.io/football/teams/727.png",
+              "winner": null
+            }
+          },
+          "goals": {
+            "home": null,
+            "away": null
+          },
+          "score": {
+            "halftime": {
+              "home": null,
+              "away": null
+            },
+            "fulltime": {
+              "home": null,
+              "away": null
+            },
+            "extratime": {
+              "home": null,
+              "away": null
+            },
+            "penalty": {
+              "home": null,
+              "away": null
+            }
+          },
+          "events": [],
+          "lineups": [],
+          "statistics": [],
+          "players": []
+        }
+      ]
+    },
+    "odds_early": {
+      "id": "f87448c662690574c9930af99d743f4b",
+      "sport_key": "soccer_spain_la_liga",
+      "sport_title": "La Liga - Spain",
+      "commence_time": "2025-08-19T19:00:00Z",
+      "home_team": "Real Madrid",
+      "away_team": "CA Osasuna",
+      "bookmakers": [
+        {
+          "key": "sportsbet",
+          "title": "SportsBet",
+          "last_update": "2025-08-18T19:07:05Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2025-08-18T19:07:05Z",
+              "outcomes": [
+                {
+                  "name": "CA Osasuna",
+                  "price": 12.0
+                },
+                {
+                  "name": "Real Madrid",
+                  "price": 1.18
+                },
+                {
+                  "name": "Draw",
+                  "price": 6.5
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "marathonbet",
+          "title": "Marathon Bet",
+          "last_update": "2025-08-18T19:07:06Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2025-08-18T19:07:06Z",
+              "outcomes": [
+                {
+                  "name": "CA Osasuna",
+                  "price": 13.5
+                },
+                {
+                  "name": "Real Madrid",
+                  "price": 1.22
+                },
+                {
+                  "name": "Draw",
+                  "price": 6.6
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "fanduel",
+          "title": "FanDuel",
+          "last_update": "2025-08-18T19:01:23Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2025-08-18T19:01:23Z",
+              "outcomes": [
+                {
+                  "name": "CA Osasuna",
+                  "price": 11.0
+                },
+                {
+                  "name": "Real Madrid",
+                  "price": 1.21
+                },
+                {
+                  "name": "Draw",
+                  "price": 6.5
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "winamax_fr",
+          "title": "Winamax (FR)",
+          "last_update": "2025-08-18T19:07:09Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2025-08-18T19:07:09Z",
+              "outcomes": [
+                {
+                  "name": "CA Osasuna",
+                  "price": 12.5
+                },
+                {
+                  "name": "Real Madrid",
+                  "price": 1.23
+                },
+                {
+                  "name": "Draw",
+                  "price": 6.75
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "parionssport_fr",
+          "title": "Parions Sport (FR)",
+          "last_update": "2025-08-18T19:07:06Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2025-08-18T19:07:06Z",
+              "outcomes": [
+                {
+                  "name": "CA Osasuna",
+                  "price": 12.5
+                },
+                {
+                  "name": "Real Madrid",
+                  "price": 1.21
+                },
+                {
+                  "name": "Draw",
+                  "price": 6.5
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "winamax_de",
+          "title": "Winamax (DE)",
+          "last_update": "2025-08-18T19:07:10Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2025-08-18T19:07:09Z",
+              "outcomes": [
+                {
+                  "name": "CA Osasuna",
+                  "price": 12.0
+                },
+                {
+                  "name": "Real Madrid",
+                  "price": 1.22
+                },
+                {
+                  "name": "Draw",
+                  "price": 6.5
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "unibet_fr",
+          "title": "Unibet (FR)",
+          "last_update": "2025-08-18T19:07:06Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2025-08-18T19:07:06Z",
+              "outcomes": [
+                {
+                  "name": "CA Osasuna",
+                  "price": 11.5
+                },
+                {
+                  "name": "Real Madrid",
+                  "price": 1.22
+                },
+                {
+                  "name": "Draw",
+                  "price": 6.25
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "williamhill",
+          "title": "William Hill",
+          "last_update": "2025-08-18T19:07:05Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2025-08-18T19:07:05Z",
+              "outcomes": [
+                {
+                  "name": "CA Osasuna",
+                  "price": 13.0
+                },
+                {
+                  "name": "Real Madrid",
+                  "price": 1.2
+                },
+                {
+                  "name": "Draw",
+                  "price": 6.5
+                }
+              ]
+            },
+            {
+              "key": "totals",
+              "last_update": "2025-08-18T19:07:05Z",
+              "outcomes": [
+                {
+                  "name": "Over",
+                  "price": 1.5,
+                  "point": 2.5
+                },
+                {
+                  "name": "Under",
+                  "price": 2.45,
+                  "point": 2.5
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "onexbet",
+          "title": "1xBet",
+          "last_update": "2025-08-18T19:07:05Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2025-08-18T19:07:05Z",
+              "outcomes": [
+                {
+                  "name": "CA Osasuna",
+                  "price": 14.4
+                },
+                {
+                  "name": "Real Madrid",
+                  "price": 1.24
+                },
+                {
+                  "name": "Draw",
+                  "price": 7.08
+                }
+              ]
+            },
+            {
+              "key": "spreads",
+              "last_update": "2025-08-18T19:07:05Z",
+              "outcomes": [
+                {
+                  "name": "CA Osasuna",
+                  "price": 2.29,
+                  "point": 1.5
+                },
+                {
+                  "name": "Real Madrid",
+                  "price": 1.73,
+                  "point": -1.5
+                }
+              ]
+            },
+            {
+              "key": "totals",
+              "last_update": "2025-08-18T19:07:05Z",
+              "outcomes": [
+                {
+                  "name": "Over",
+                  "price": 2.42,
+                  "point": 3.5
+                },
+                {
+                  "name": "Under",
+                  "price": 1.66,
+                  "point": 3.5
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "tipico_de",
+          "title": "Tipico",
+          "last_update": "2025-08-18T19:07:14Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2025-08-18T19:07:14Z",
+              "outcomes": [
+                {
+                  "name": "CA Osasuna",
+                  "price": 13.0
+                },
+                {
+                  "name": "Real Madrid",
+                  "price": 1.2
+                },
+                {
+                  "name": "Draw",
+                  "price": 7.2
+                }
+              ]
+            },
+            {
+              "key": "totals",
+              "last_update": "2025-08-18T19:07:14Z",
+              "outcomes": [
+                {
+                  "name": "Over",
+                  "price": 2.1,
+                  "point": 3.5
+                },
+                {
+                  "name": "Under",
+                  "price": 1.67,
+                  "point": 3.5
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "tab",
+          "title": "TAB",
+          "last_update": "2025-08-18T19:04:20Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2025-08-18T19:04:20Z",
+              "outcomes": [
+                {
+                  "name": "CA Osasuna",
+                  "price": 13.0
+                },
+                {
+                  "name": "Real Madrid",
+                  "price": 1.22
+                },
+                {
+                  "name": "Draw",
+                  "price": 6.0
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "playup",
+          "title": "PlayUp",
+          "last_update": "2025-08-18T19:07:06Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2025-08-18T19:07:05Z",
+              "outcomes": [
+                {
+                  "name": "CA Osasuna",
+                  "price": 12.0
+                },
+                {
+                  "name": "Real Madrid",
+                  "price": 1.22
+                },
+                {
+                  "name": "Draw",
+                  "price": 6.25
+                }
+              ]
+            },
+            {
+              "key": "spreads",
+              "last_update": "2025-08-18T19:07:05Z",
+              "outcomes": [
+                {
+                  "name": "CA Osasuna",
+                  "price": 2.2,
+                  "point": 1.5
+                },
+                {
+                  "name": "Real Madrid",
+                  "price": 1.65,
+                  "point": -1.5
+                }
+              ]
+            },
+            {
+              "key": "totals",
+              "last_update": "2025-08-18T19:07:05Z",
+              "outcomes": [
+                {
+                  "name": "Over",
+                  "price": 2.4,
+                  "point": 3.5
+                },
+                {
+                  "name": "Under",
+                  "price": 1.55,
+                  "point": 3.5
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "draftkings",
+          "title": "DraftKings",
+          "last_update": "2025-08-18T19:07:04Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2025-08-18T19:07:04Z",
+              "outcomes": [
+                {
+                  "name": "CA Osasuna",
+                  "price": 10.5
+                },
+                {
+                  "name": "Real Madrid",
+                  "price": 1.22
+                },
+                {
+                  "name": "Draw",
+                  "price": 6.0
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "pinnacle",
+          "title": "Pinnacle",
+          "last_update": "2025-08-18T19:07:04Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2025-08-18T19:07:04Z",
+              "outcomes": [
+                {
+                  "name": "CA Osasuna",
+                  "price": 12.02
+                },
+                {
+                  "name": "Real Madrid",
+                  "price": 1.23
+                },
+                {
+                  "name": "Draw",
+                  "price": 6.85
+                }
+              ]
+            },
+            {
+              "key": "spreads",
+              "last_update": "2025-08-18T19:07:04Z",
+              "outcomes": [
+                {
+                  "name": "CA Osasuna",
+                  "price": 2.02,
+                  "point": 1.75
+                },
+                {
+                  "name": "Real Madrid",
+                  "price": 1.88,
+                  "point": -1.75
+                }
+              ]
+            },
+            {
+              "key": "totals",
+              "last_update": "2025-08-18T19:07:04Z",
+              "outcomes": [
+                {
+                  "name": "Over",
+                  "price": 1.86,
+                  "point": 3.0
+                },
+                {
+                  "name": "Under",
+                  "price": 2.01,
+                  "point": 3.0
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "betsson",
+          "title": "Betsson",
+          "last_update": "2025-08-18T19:07:05Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2025-08-18T19:07:05Z",
+              "outcomes": [
+                {
+                  "name": "CA Osasuna",
+                  "price": 12.5
+                },
+                {
+                  "name": "Real Madrid",
+                  "price": 1.23
+                },
+                {
+                  "name": "Draw",
+                  "price": 6.4
+                }
+              ]
+            },
+            {
+              "key": "totals",
+              "last_update": "2025-08-18T19:07:05Z",
+              "outcomes": [
+                {
+                  "name": "Over",
+                  "price": 2.38,
+                  "point": 3.5
+                },
+                {
+                  "name": "Under",
+                  "price": 1.55,
+                  "point": 3.5
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "nordicbet",
+          "title": "Nordic Bet",
+          "last_update": "2025-08-18T19:07:05Z",
+          "markets": [
+            {
+              "key": "totals",
+              "last_update": "2025-08-18T19:07:05Z",
+              "outcomes": [
+                {
+                  "name": "Over",
+                  "price": 1.55,
+                  "point": 2.5
+                },
+                {
+                  "name": "Under",
+                  "price": 2.48,
+                  "point": 2.5
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "betfair_ex_au",
+          "title": "Betfair",
+          "last_update": "2025-08-18T19:07:08Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2025-08-18T19:07:08Z",
+              "outcomes": [
+                {
+                  "name": "CA Osasuna",
+                  "price": 15.5
+                },
+                {
+                  "name": "Real Madrid",
+                  "price": 1.25
+                },
+                {
+                  "name": "Draw",
+                  "price": 7.2
+                }
+              ]
+            },
+            {
+              "key": "h2h_lay",
+              "last_update": "2025-08-18T19:07:08Z",
+              "outcomes": [
+                {
+                  "name": "CA Osasuna",
+                  "price": 16.0
+                },
+                {
+                  "name": "Real Madrid",
+                  "price": 1.26
+                },
+                {
+                  "name": "Draw",
+                  "price": 7.4
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "betfair_ex_eu",
+          "title": "Betfair",
+          "last_update": "2025-08-18T19:07:05Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2025-08-18T19:07:05Z",
+              "outcomes": [
+                {
+                  "name": "CA Osasuna",
+                  "price": 15.5
+                },
+                {
+                  "name": "Real Madrid",
+                  "price": 1.25
+                },
+                {
+                  "name": "Draw",
+                  "price": 7.2
+                }
+              ]
+            },
+            {
+              "key": "h2h_lay",
+              "last_update": "2025-08-18T19:07:05Z",
+              "outcomes": [
+                {
+                  "name": "CA Osasuna",
+                  "price": 16.0
+                },
+                {
+                  "name": "Real Madrid",
+                  "price": 1.26
+                },
+                {
+                  "name": "Draw",
+                  "price": 7.4
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "coolbet",
+          "title": "Coolbet",
+          "last_update": "2025-08-18T19:07:06Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2025-08-18T19:07:06Z",
+              "outcomes": [
+                {
+                  "name": "CA Osasuna",
+                  "price": 13.0
+                },
+                {
+                  "name": "Real Madrid",
+                  "price": 1.24
+                },
+                {
+                  "name": "Draw",
+                  "price": 6.7
+                }
+              ]
+            },
+            {
+              "key": "totals",
+              "last_update": "2025-08-18T19:07:06Z",
+              "outcomes": [
+                {
+                  "name": "Over",
+                  "price": 1.9,
+                  "point": 3.0
+                },
+                {
+                  "name": "Under",
+                  "price": 1.95,
+                  "point": 3.0
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "everygame",
+          "title": "Everygame",
+          "last_update": "2025-08-18T19:07:07Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2025-08-18T19:07:07Z",
+              "outcomes": [
+                {
+                  "name": "CA Osasuna",
+                  "price": 12.0
+                },
+                {
+                  "name": "Real Madrid",
+                  "price": 1.22
+                },
+                {
+                  "name": "Draw",
+                  "price": 6.5
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "betrivers",
+          "title": "BetRivers",
+          "last_update": "2025-08-18T19:07:05Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2025-08-18T19:07:05Z",
+              "outcomes": [
+                {
+                  "name": "CA Osasuna",
+                  "price": 13.0
+                },
+                {
+                  "name": "Real Madrid",
+                  "price": 1.22
+                },
+                {
+                  "name": "Draw",
+                  "price": 7.0
+                }
+              ]
+            },
+            {
+              "key": "totals",
+              "last_update": "2025-08-18T19:07:05Z",
+              "outcomes": [
+                {
+                  "name": "Over",
+                  "price": 2.28,
+                  "point": 3.5
+                },
+                {
+                  "name": "Under",
+                  "price": 1.65,
+                  "point": 3.5
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "unibet_nl",
+          "title": "Unibet (NL)",
+          "last_update": "2025-08-18T19:07:06Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2025-08-18T19:07:06Z",
+              "outcomes": [
+                {
+                  "name": "CA Osasuna",
+                  "price": 14.0
+                },
+                {
+                  "name": "Real Madrid",
+                  "price": 1.22
+                },
+                {
+                  "name": "Draw",
+                  "price": 7.0
+                }
+              ]
+            },
+            {
+              "key": "totals",
+              "last_update": "2025-08-18T19:07:06Z",
+              "outcomes": [
+                {
+                  "name": "Over",
+                  "price": 2.23,
+                  "point": 3.5
+                },
+                {
+                  "name": "Under",
+                  "price": 1.62,
+                  "point": 3.5
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "unibet_it",
+          "title": "Unibet (IT)",
+          "last_update": "2025-08-18T19:07:06Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2025-08-18T19:07:06Z",
+              "outcomes": [
+                {
+                  "name": "CA Osasuna",
+                  "price": 13.0
+                },
+                {
+                  "name": "Real Madrid",
+                  "price": 1.19
+                },
+                {
+                  "name": "Draw",
+                  "price": 6.75
+                }
+              ]
+            },
+            {
+              "key": "totals",
+              "last_update": "2025-08-18T19:07:06Z",
+              "outcomes": [
+                {
+                  "name": "Over",
+                  "price": 2.23,
+                  "point": 3.5
+                },
+                {
+                  "name": "Under",
+                  "price": 1.62,
+                  "point": 3.5
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "tabtouch",
+          "title": "TABtouch",
+          "last_update": "2025-08-18T19:07:06Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2025-08-18T19:07:06Z",
+              "outcomes": [
+                {
+                  "name": "CA Osasuna",
+                  "price": 13.0
+                },
+                {
+                  "name": "Real Madrid",
+                  "price": 1.19
+                },
+                {
+                  "name": "Draw",
+                  "price": 6.75
+                }
+              ]
+            },
+            {
+              "key": "totals",
+              "last_update": "2025-08-18T19:07:06Z",
+              "outcomes": [
+                {
+                  "name": "Over",
+                  "price": 2.23,
+                  "point": 3.5
+                },
+                {
+                  "name": "Under",
+                  "price": 1.62,
+                  "point": 3.5
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "unibet",
+          "title": "Unibet",
+          "last_update": "2025-08-18T19:07:05Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2025-08-18T19:07:05Z",
+              "outcomes": [
+                {
+                  "name": "CA Osasuna",
+                  "price": 13.0
+                },
+                {
+                  "name": "Real Madrid",
+                  "price": 1.19
+                },
+                {
+                  "name": "Draw",
+                  "price": 6.75
+                }
+              ]
+            },
+            {
+              "key": "totals",
+              "last_update": "2025-08-18T19:07:05Z",
+              "outcomes": [
+                {
+                  "name": "Over",
+                  "price": 2.23,
+                  "point": 3.5
+                },
+                {
+                  "name": "Under",
+                  "price": 1.62,
+                  "point": 3.5
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "betmgm",
+          "title": "BetMGM",
+          "last_update": "2025-08-18T19:07:05Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2025-08-18T19:07:05Z",
+              "outcomes": [
+                {
+                  "name": "CA Osasuna",
+                  "price": 12.5
+                },
+                {
+                  "name": "Real Madrid",
+                  "price": 1.22
+                },
+                {
+                  "name": "Draw",
+                  "price": 6.5
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "ladbrokes_au",
+          "title": "Ladbrokes",
+          "last_update": "2025-08-18T19:07:07Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2025-08-18T19:07:07Z",
+              "outcomes": [
+                {
+                  "name": "CA Osasuna",
+                  "price": 11.5
+                },
+                {
+                  "name": "Real Madrid",
+                  "price": 1.22
+                },
+                {
+                  "name": "Draw",
+                  "price": 6.25
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "neds",
+          "title": "Neds",
+          "last_update": "2025-08-18T19:07:05Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2025-08-18T19:07:05Z",
+              "outcomes": [
+                {
+                  "name": "CA Osasuna",
+                  "price": 11.5
+                },
+                {
+                  "name": "Real Madrid",
+                  "price": 1.22
+                },
+                {
+                  "name": "Draw",
+                  "price": 6.25
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "bovada",
+          "title": "Bovada",
+          "last_update": "2025-08-18T19:07:07Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2025-08-18T19:07:07Z",
+              "outcomes": [
+                {
+                  "name": "CA Osasuna",
+                  "price": 11.0
+                },
+                {
+                  "name": "Real Madrid",
+                  "price": 1.22
+                },
+                {
+                  "name": "Draw",
+                  "price": 6.5
+                }
+              ]
+            },
+            {
+              "key": "spreads",
+              "last_update": "2025-08-18T19:07:07Z",
+              "outcomes": [
+                {
+                  "name": "CA Osasuna",
+                  "price": 1.98,
+                  "point": 1.75
+                },
+                {
+                  "name": "Real Madrid",
+                  "price": 1.85,
+                  "point": -1.75
+                }
+              ]
+            },
+            {
+              "key": "totals",
+              "last_update": "2025-08-18T19:07:07Z",
+              "outcomes": [
+                {
+                  "name": "Over",
+                  "price": 1.85,
+                  "point": 3.0
+                },
+                {
+                  "name": "Under",
+                  "price": 1.98,
+                  "point": 3.0
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "betonlineag",
+          "title": "BetOnline.ag",
+          "last_update": "2025-08-18T19:07:04Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2025-08-18T19:07:04Z",
+              "outcomes": [
+                {
+                  "name": "CA Osasuna",
+                  "price": 12.25
+                },
+                {
+                  "name": "Real Madrid",
+                  "price": 1.23
+                },
+                {
+                  "name": "Draw",
+                  "price": 7.0
+                }
+              ]
+            },
+            {
+              "key": "spreads",
+              "last_update": "2025-08-18T19:07:04Z",
+              "outcomes": [
+                {
+                  "name": "CA Osasuna",
+                  "price": 1.99,
+                  "point": 1.75
+                },
+                {
+                  "name": "Real Madrid",
+                  "price": 1.84,
+                  "point": -1.75
+                }
+              ]
+            },
+            {
+              "key": "totals",
+              "last_update": "2025-08-18T19:07:04Z",
+              "outcomes": [
+                {
+                  "name": "Over",
+                  "price": 1.83,
+                  "point": 3.0
+                },
+                {
+                  "name": "Under",
+                  "price": 2.0,
+                  "point": 3.0
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "lowvig",
+          "title": "LowVig.ag",
+          "last_update": "2025-08-18T19:07:04Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2025-08-18T19:07:04Z",
+              "outcomes": [
+                {
+                  "name": "CA Osasuna",
+                  "price": 12.25
+                },
+                {
+                  "name": "Real Madrid",
+                  "price": 1.23
+                },
+                {
+                  "name": "Draw",
+                  "price": 7.0
+                }
+              ]
+            },
+            {
+              "key": "spreads",
+              "last_update": "2025-08-18T19:07:04Z",
+              "outcomes": [
+                {
+                  "name": "CA Osasuna",
+                  "price": 1.99,
+                  "point": 1.75
+                },
+                {
+                  "name": "Real Madrid",
+                  "price": 1.84,
+                  "point": -1.75
+                }
+              ]
+            },
+            {
+              "key": "totals",
+              "last_update": "2025-08-18T19:07:04Z",
+              "outcomes": [
+                {
+                  "name": "Over",
+                  "price": 1.83,
+                  "point": 3.0
+                },
+                {
+                  "name": "Under",
+                  "price": 2.0,
+                  "point": 3.0
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "betus",
+          "title": "BetUS",
+          "last_update": "2025-08-18T19:07:06Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2025-08-18T19:07:06Z",
+              "outcomes": [
+                {
+                  "name": "CA Osasuna",
+                  "price": 13.06
+                },
+                {
+                  "name": "Real Madrid",
+                  "price": 1.21
+                },
+                {
+                  "name": "Draw",
+                  "price": 6.48
+                }
+              ]
+            },
+            {
+              "key": "spreads",
+              "last_update": "2025-08-18T19:07:06Z",
+              "outcomes": [
+                {
+                  "name": "CA Osasuna",
+                  "price": 2.1,
+                  "point": 1.5
+                },
+                {
+                  "name": "Real Madrid",
+                  "price": 1.77,
+                  "point": -1.5
+                }
+              ]
+            },
+            {
+              "key": "totals",
+              "last_update": "2025-08-18T19:07:06Z",
+              "outcomes": [
+                {
+                  "name": "Over",
+                  "price": 1.88,
+                  "point": 3.0
+                },
+                {
+                  "name": "Under",
+                  "price": 1.93,
+                  "point": 3.0
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "betr_au",
+          "title": "Betr",
+          "last_update": "2025-08-18T19:07:07Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2025-08-18T19:07:07Z",
+              "outcomes": [
+                {
+                  "name": "CA Osasuna",
+                  "price": 13.0
+                },
+                {
+                  "name": "Real Madrid",
+                  "price": 1.2
+                },
+                {
+                  "name": "Draw",
+                  "price": 6.25
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "matchbook",
+          "title": "Matchbook",
+          "last_update": "2025-08-18T19:07:04Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2025-08-18T19:07:04Z",
+              "outcomes": [
+                {
+                  "name": "CA Osasuna",
+                  "price": 16.0
+                },
+                {
+                  "name": "Real Madrid",
+                  "price": 1.25
+                },
+                {
+                  "name": "Draw",
+                  "price": 7.2
+                }
+              ]
+            },
+            {
+              "key": "h2h_lay",
+              "last_update": "2025-08-18T19:07:04Z",
+              "outcomes": [
+                {
+                  "name": "CA Osasuna",
+                  "price": 16.5
+                },
+                {
+                  "name": "Real Madrid",
+                  "price": 1.26
+                },
+                {
+                  "name": "Draw",
+                  "price": 7.4
+                }
+              ]
+            },
+            {
+              "key": "spreads",
+              "last_update": "2025-08-18T19:07:04Z",
+              "outcomes": [
+                {
+                  "name": "CA Osasuna",
+                  "price": 2.06,
+                  "point": 1.75
+                },
+                {
+                  "name": "Real Madrid",
+                  "price": 1.89,
+                  "point": -1.75
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "betright",
+          "title": "Bet Right",
+          "last_update": "2025-08-18T19:07:06Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2025-08-18T19:07:06Z",
+              "outcomes": [
+                {
+                  "name": "CA Osasuna",
+                  "price": 13.0
+                },
+                {
+                  "name": "Real Madrid",
+                  "price": 1.2
+                },
+                {
+                  "name": "Draw",
+                  "price": 6.0
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "betclic_fr",
+          "title": "Betclic (FR)",
+          "last_update": "2025-08-18T19:07:15Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2025-08-18T19:07:15Z",
+              "outcomes": [
+                {
+                  "name": "CA Osasuna",
+                  "price": 11.75
+                },
+                {
+                  "name": "Real Madrid",
+                  "price": 1.23
+                },
+                {
+                  "name": "Draw",
+                  "price": 6.3
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "_mapping_metadata": {
+        "home_mapping": {
+          "api_football_name": "Real Madrid",
+          "odds_api_name": "Real Madrid",
+          "confidence": 1.0,
+          "strategy_used": "exact_match",
+          "match_found": true,
+          "alternatives": [],
+          "processing_time": 1e-05
+        },
+        "away_mapping": {
+          "api_football_name": "Osasuna",
+          "odds_api_name": "CA Osasuna",
+          "confidence": 0.4941176470588235,
+          "strategy_used": "fuzzy_matching",
+          "match_found": true,
+          "alternatives": [
+            "CA Osasuna",
+            "CA Osasuna",
+            "Girona"
+          ],
+          "processing_time": 0.007634
+        }
+      }
+    }
+  }
+}
