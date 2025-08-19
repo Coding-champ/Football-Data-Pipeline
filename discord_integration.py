@@ -134,51 +134,51 @@ if DISCORD_AVAILABLE:
 
         @commands.command(name='odds')
         async def odds_command(self, ctx, *, team_name: str):
-                    """Get latest odds for team's next game"""
-                    try:
-                        conn = sqlite3.connect(self.database_path)
-                        conn.row_factory = sqlite3.Row
-                        game = conn.execute("""
-                            SELECT f.*, ht.name as home_team, at.name as away_team, l.name as league
-                            FROM fixtures f
-                            JOIN teams ht ON f.home_team_id = ht.id
-                            JOIN teams at ON f.away_team_id = at.id
-                            JOIN leagues l ON f.league_id = l.id
-                            WHERE (ht.name LIKE ? OR at.name LIKE ?) 
-                            AND f.kickoff_utc > datetime('now')
-                            ORDER BY f.kickoff_utc
-                            LIMIT 1
-                        """, (f'%{team_name}%', f'%{team_name}%')).fetchone()
-                        if not game:
-                            await ctx.send(f"No upcoming games found for '{team_name}'")
-                            return
-                        odds = conn.execute("""
-                            SELECT * FROM odds_history 
-                            WHERE fixture_id = ? AND market_type = 'h2h'
-                            ORDER BY collected_at DESC
-                            LIMIT 3
-                        """, (game['id'],)).fetchall()
-                        embed = discord.Embed(
-                            title=f"🎲 Odds: {game['home_team']} vs {game['away_team']}",
-                            description=f"**{game['league']}**",
-                            color=0x00ff00
-                        )
-                        kickoff_timestamp = int(datetime.fromisoformat(game['kickoff_utc'].replace(' ', 'T')).timestamp())
-                        embed.add_field(name="⏰ Kickoff", value=f"<t:{kickoff_timestamp}:F>", inline=False)
-                        for odd in odds:
-                            embed.add_field(
-                                name=f"📊 {odd['bookmaker']} ({odd['collection_phase']})",
-                                value=f"**{game['home_team']}**: {odd['home_odds']}\n"
-                                     f"**{game['away_team']}**: {odd['away_odds']}\n"
-                                     f"Draw: {odd['draw_odds']}\n"
-                                     f"Market: {odd['market_type']}"
-                            )
-                        await ctx.send(embed=embed)
-                    except Exception as e:
-                        await ctx.send(f"Error fetching odds: {e}")
-                    inline=True
-            
-                    await ctx.send(embed=embed)
+            """Get latest odds for team's next game"""
+            try:
+                conn = sqlite3.connect(self.database_path)
+                conn.row_factory = sqlite3.Row
+                game = conn.execute("""
+                    SELECT f.*, ht.name as home_team, at.name as away_team, l.name as league
+                    FROM fixtures f
+                    JOIN teams ht ON f.home_team_id = ht.id
+                    JOIN teams at ON f.away_team_id = at.id
+                    JOIN leagues l ON f.league_id = l.id
+                    WHERE (ht.name LIKE ? OR at.name LIKE ?) 
+                    AND f.kickoff_utc > datetime('now')
+                    ORDER BY f.kickoff_utc
+                    LIMIT 1
+                """, (f'%{team_name}%', f'%{team_name}%')).fetchone()
+                if not game:
+                    await ctx.send(f"No upcoming games found for '{team_name}'")
+                    return
+                odds = conn.execute("""
+                    SELECT * FROM odds_history 
+                    WHERE fixture_id = ? AND market_type = 'h2h'
+                    ORDER BY collected_at DESC
+                    LIMIT 3
+                """, (game['id'],)).fetchall()
+                embed = discord.Embed(
+                    title=f"🎲 Odds: {game['home_team']} vs {game['away_team']}",
+                    description=f"**{game['league']}**",
+                    color=0x00ff00
+                )
+                kickoff_timestamp = int(datetime.fromisoformat(game['kickoff_utc'].replace(' ', 'T')).timestamp())
+                embed.add_field(name="⏰ Kickoff", value=f"<t:{kickoff_timestamp}:F>", inline=False)
+                for odd in odds:
+                    embed.add_field(
+                        name=f"📊 {odd['bookmaker']} ({odd['collection_phase']})",
+                        value=f"**{game['home_team']}**: {odd['home_odds']}\n"
+                                f"**{game['away_team']}**: {odd['away_odds']}\n"
+                                f"Draw: {odd['draw_odds']}\n"
+                                f"Market: {odd['market_type']}"
+                    )
+                await ctx.send(embed=embed)
+            except Exception as e:
+                await ctx.send(f"Error fetching odds: {e}")
+            inline=True
+    
+            await ctx.send(embed=embed)
     
         @commands.command(name='trends')
         async def odds_trends_command(self, ctx, *, team_name: str):
@@ -231,70 +231,70 @@ if DISCORD_AVAILABLE:
         
         @commands.command(name='form')
         async def team_form_command(self, ctx, *, team_name: str):
-        """Show team's recent form and statistics"""
-        try:
-            conn = sqlite3.connect(self.database_path)
-            conn.row_factory = sqlite3.Row
-            
-            # Find team
-            team = conn.execute("""
-                SELECT * FROM teams WHERE name LIKE ? LIMIT 1
-            """, (f'%{team_name}%',)).fetchone()
-            
-            if not team:
-                await ctx.send(f"Team '{team_name}' not found")
-                return
-            
-            # Get latest stats
-            stats = conn.execute("""
-                SELECT * FROM team_statistics 
-                WHERE team_id = ?
-                ORDER BY collection_date DESC LIMIT 1
-            """, (team['id'],)).fetchone()
-            
-            # Get recent fixtures
-            recent_fixtures = conn.execute("""
-                SELECT f.*, ht.name as home_team, at.name as away_team,
-                       CASE 
-                         WHEN f.home_team_id = ? THEN 'home'
-                         ELSE 'away' 
-                       END as venue
-                FROM fixtures f
-                JOIN teams ht ON f.home_team_id = ht.id
-                JOIN teams at ON f.away_team_id = at.id
-                WHERE (f.home_team_id = ? OR f.away_team_id = ?)
-                AND f.kickoff_utc <= datetime('now')
-                AND f.status != 'scheduled'
-                ORDER BY f.kickoff_utc DESC LIMIT 5
-            """, (team['id'], team['id'], team['id'])).fetchall()
-            
-            embed = discord.Embed(
-                title=f"📊 {team['name']} - Team Form",
-                color=0x00aaff
-            )
-            
-            if stats:
-                embed.add_field(
-                    name="📈 Season Stats",
-                    value=f"**Played**: {stats['matches_played']}\n"
-                          f"**Win Rate**: {stats['win_percentage']:.1f}%\n"
-                          f"**Goals**: {stats['goals_for']}-{stats['goals_against']}",
-                    inline=True
-                )
-            
-            if recent_fixtures:
-                form_string = ""
-                for fixture in recent_fixtures:
-                    venue_icon = "🏠" if fixture['venue'] == 'home' else "✈️"
-                    opponent = fixture['away_team'] if fixture['venue'] == 'home' else fixture['home_team']
-                    form_string += f"{venue_icon} vs {opponent}\n"
+            """Show team's recent form and statistics"""
+            try:
+                conn = sqlite3.connect(self.database_path)
+                conn.row_factory = sqlite3.Row
                 
-                embed.add_field(name="🏃 Recent Games", value=form_string, inline=True)
-            
-            await ctx.send(embed=embed)
-            
-        except Exception as e:
-            await ctx.send(f"Error fetching team form: {e}")
+                # Find team
+                team = conn.execute("""
+                    SELECT * FROM teams WHERE name LIKE ? LIMIT 1
+                """, (f'%{team_name}%',)).fetchone()
+                
+                if not team:
+                    await ctx.send(f"Team '{team_name}' not found")
+                    return
+                
+                # Get latest stats
+                stats = conn.execute("""
+                    SELECT * FROM team_statistics 
+                    WHERE team_id = ?
+                    ORDER BY collection_date DESC LIMIT 1
+                """, (team['id'],)).fetchone()
+                
+                # Get recent fixtures
+                recent_fixtures = conn.execute("""
+                    SELECT f.*, ht.name as home_team, at.name as away_team,
+                        CASE 
+                            WHEN f.home_team_id = ? THEN 'home'
+                            ELSE 'away' 
+                        END as venue
+                    FROM fixtures f
+                    JOIN teams ht ON f.home_team_id = ht.id
+                    JOIN teams at ON f.away_team_id = at.id
+                    WHERE (f.home_team_id = ? OR f.away_team_id = ?)
+                    AND f.kickoff_utc <= datetime('now')
+                    AND f.status != 'scheduled'
+                    ORDER BY f.kickoff_utc DESC LIMIT 5
+                """, (team['id'], team['id'], team['id'])).fetchall()
+                
+                embed = discord.Embed(
+                    title=f"📊 {team['name']} - Team Form",
+                    color=0x00aaff
+                )
+                
+                if stats:
+                    embed.add_field(
+                        name="📈 Season Stats",
+                        value=f"**Played**: {stats['matches_played']}\n"
+                            f"**Win Rate**: {stats['win_percentage']:.1f}%\n"
+                            f"**Goals**: {stats['goals_for']}-{stats['goals_against']}",
+                        inline=True
+                    )
+                
+                if recent_fixtures:
+                    form_string = ""
+                    for fixture in recent_fixtures:
+                        venue_icon = "🏠" if fixture['venue'] == 'home' else "✈️"
+                        opponent = fixture['away_team'] if fixture['venue'] == 'home' else fixture['home_team']
+                        form_string += f"{venue_icon} vs {opponent}\n"
+                    
+                    embed.add_field(name="🏃 Recent Games", value=form_string, inline=True)
+                
+                await ctx.send(embed=embed)
+                
+            except Exception as e:
+                await ctx.send(f"Error fetching team form: {e}")
 
 # =============================================================================
 # ADMIN COMMANDS
