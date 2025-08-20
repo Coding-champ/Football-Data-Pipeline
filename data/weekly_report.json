@@ -1,0 +1,70 @@
+{
+  "report_date": "2025-08-20T08:34:51.996270",
+  "period": "last_7_days",
+  "summary": {
+    "odds_collected": 188,
+    "games_tracked": 3,
+    "top_leagues": [
+      {
+        "name": "La Liga",
+        "games": 3
+      }
+    ],
+    "bookmakers": [
+      {
+        "name": "Betfair",
+        "records": 12
+      },
+      {
+        "name": "Matchbook",
+        "records": 10
+      },
+      {
+        "name": "PlayUp",
+        "records": 9
+      },
+      {
+        "name": "Pinnacle",
+        "records": 9
+      },
+      {
+        "name": "LowVig.ag",
+        "records": 9
+      },
+      {
+        "name": "Bovada",
+        "records": 9
+      },
+      {
+        "name": "BetUS",
+        "records": 9
+      },
+      {
+        "name": "BetOnline.ag",
+        "records": 9
+      },
+      {
+        "name": "1xBet",
+        "records": 9
+      },
+      {
+        "name": "William Hill",
+        "records": 6
+      }
+    ],
+    "collection_phases": [
+      {
+        "phase": "early_odds",
+        "records": 63
+      },
+      {
+        "phase": "final_data",
+        "records": 63
+      },
+      {
+        "phase": "team_news",
+        "records": 62
+      }
+    ]
+  }
+}

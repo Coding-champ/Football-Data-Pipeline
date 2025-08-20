@@ -1,0 +1,32 @@
+{
+  "date": "2025-08-20",
+  "stats": {
+    "total_attempts": 6,
+    "successful_mappings": 6,
+    "failed_mappings": 0,
+    "success_rate": 1.0,
+    "avg_confidence": 0.8823529411764706,
+    "strategy_usage": {
+      "exact_match": 3,
+      "fuzzy_matching": 1,
+      "manual_mapping": 1,
+      "normalized_matching": 1
+    }
+  },
+  "report": {
+    "report_date": "2025-08-20T08:34:52.316994",
+    "period_days": 1,
+    "overall_stats": {
+      "total_attempts": 0,
+      "successful_mappings": null,
+      "success_rate": 0.0,
+      "avg_confidence": 0.0,
+      "avg_processing_time": 0.0
+    },
+    "strategy_performance": [],
+    "failed_mappings": [],
+    "recent_successes": [],
+    "learned_mappings_count": 4,
+    "manual_mappings_count": 58
+  }
+}
