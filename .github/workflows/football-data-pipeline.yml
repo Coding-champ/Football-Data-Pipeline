@@ -301,12 +301,12 @@ jobs:
       uses: actions/setup-python@v4
       with:
         python-version: '3.11'
-        
+
     - name: Install Dependencies
       run: |
         pip install requests python-dateutil pytz
-        
-    - name: Process Pending Jobs
+
+    - name: Process Pending Jobs with Logging
       run: |
         python << 'EOF'
         import json
@@ -315,342 +315,91 @@ jobs:
         import os
         import pytz
         import sqlite3
-        
-        def store_fixture_data(collected_data, collection_type):
-            """Enhanced fixture data storage with complete database integration"""
+        import logging
+
+        # Logging-Konfiguration
+        logging.basicConfig(level=logging.INFO)
+        logger = logging.getLogger("pipeline")
+
+        DATA_DIR = 'data'
+        os.makedirs(DATA_DIR, exist_ok=True)
+
+        def write_json_with_logging(filename, data, job, reason=""):
             try:
-                import sys
-                sys.path.append('.')
-                from database_integration import FootballDatabase
-                
-                # Initialize enhanced database connection
-                db = FootballDatabase('sqlite', {'database': 'data/football_data.db'})
-                
-                # Store using enhanced database integration
-                fixture_id = db.store_fixture_data(collected_data, collection_type)
-                print(f"✅ Enhanced database storage completed for fixture {fixture_id}")
-                
-                # Generate and store mapping analytics if this is final data collection
-                if collection_type == 'final_data':
-                    try:
-                        from enhanced_mapping import EnhancedTeamMapper
-                        mapper = EnhancedTeamMapper(db_path='data/football_data.db')
-                        steps:
-                        - uses: actions/checkout@v4
-
-                        - name: Setup Python
-                          uses: actions/setup-python@v4
-                          with:
-                            python-version: '3.11'
-
-                        - name: Install Dependencies
-                          run: |
-                            pip install requests python-dateutil pytz
-
-                        - name: Process Pending Jobs with Logging
-                          run: |
-                            python << 'EOF'
-                            import json
-                            import requests
-                            from datetime import datetime, timedelta
-                            import os
-                            import pytz
-                            import sqlite3
-                            import logging
-
-                            # Logging-Konfiguration
-                            logging.basicConfig(level=logging.INFO)
-                            logger = logging.getLogger("pipeline")
-
-                            DATA_DIR = 'data'
-                            os.makedirs(DATA_DIR, exist_ok=True)
-
-                            def write_json_with_logging(filename, data, job, reason=""):
-                                try:
-                                    with open(filename, 'w', encoding='utf-8') as f:
-                                        json.dump(data, f, ensure_ascii=False, indent=2)
-                                    logger.info(f"✅ Datei geschrieben: {filename}")
-                                    job['file_write_status'] = 'success'
-                                except Exception as e:
-                                    logger.error(f"❌ Fehler beim Schreiben der Datei {filename}: {e}")
-                                    job['file_write_status'] = 'error'
-                                    job['error_reason'] = f"File-Write-Error: {e}" + (f" ({reason})" if reason else "")
-
-                            def collect_and_store_odds(job):
-                                # Beispielhafte Odds-API-Logik
-                                fixture_id = job.get('fixture_id', job.get('id'))
-                                league = job.get('league')
-                                odds_api_key = os.getenv('ODDS_API_KEY', '')
-                                odds_url = f"https://api.the-odds-api.com/v4/sports/soccer/odds/"
-                                odds_params = {'apiKey': odds_api_key, 'regions': 'eu', 'markets': 'h2h'}
-
-                                try:
-                                    response = requests.get(odds_url, params=odds_params, timeout=15)
-                                    if response.status_code == 200:
-                                        odds_data = response.json()
-                                        if not odds_data:
-                                            logger.warning(f"⚠️ Odds-API liefert keine Daten für Fixture {fixture_id}")
-                                            job['error_reason'] = "Odds-API returned empty data"
-                                        else:
-                                            # (Hier Mapping/Filter nach Teamnamen/Fixture)
-                                            filename = os.path.join(DATA_DIR, f"early_odds_{fixture_id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json")
-                                            write_json_with_logging(filename, odds_data, job)
-                                    else:
-                                        logger.error(f"❌ Odds-API Error {response.status_code} für Fixture {fixture_id}: {response.text}")
-                                        job['error_reason'] = f"Odds-API Error {response.status_code}: {response.text}"
-                                except Exception as e:
-                                    logger.error(f"❌ Odds-API Exception für Fixture {fixture_id}: {e}")
-                                    job['error_reason'] = f"Odds-API Exception: {e}"
-
-                            def collect_and_store_final_data(job):
-                                fixture_id = job.get('fixture_id', job.get('id'))
-                                # Beispielhafte Finaldaten-API-Logik
-                                try:
-                                    final_data = {"dummy": "final_data"}  # Hier echte API-Logik
-                                    filename = os.path.join(DATA_DIR, f"final_data_{fixture_id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json")
-                                    write_json_with_logging(filename, final_data, job)
-                                except Exception as e:
-                                    logger.error(f"❌ Fehler beim Finaldaten-API-Call für Fixture {fixture_id}: {e}")
-                                    job['error_reason'] = f"Final-Data-API Exception: {e}"
-
-                            # Lade Jobs
-                            jobs_path = os.path.join(os.path.dirname(__file__), 'jobs.json')
-                            with open(jobs_path, 'r', encoding='utf-8') as f:
-                                jobs = json.load(f)
-
-                            for job in jobs:
-                                if job.get('status') == 'pending':
-                                    logger.info(f"🔄 Starte Verarbeitung für Fixture {job.get('fixture_id', job.get('id'))}: {job.get('home_team')} vs {job.get('away_team')}")
-                                    collect_and_store_odds(job)
-                                    collect_and_store_final_data(job)
-                                    # Status setzen, wenn alles ok
-                                    if job.get('file_write_status') == 'success':
-                                        job['status'] = 'completed'
-                                    else:
-                                        job['status'] = 'failed'
-
-                            # Schreibe aktualisierte jobs.json inkl. Logging/Fehler
-                            with open(jobs_path, 'w', encoding='utf-8') as f:
-                                json.dump(jobs, f, indent=2, ensure_ascii=False)
-
-                            logger.info("✅ Job-Verarbeitung abgeschlossen. Siehe jobs.json für Status und Fehler.")
-                            EOF
-                # Odds API Integration
-                collect_odds_data(data, 'early')
-                return True
-                
+                with open(filename, 'w', encoding='utf-8') as f:
+                    json.dump(data, f, ensure_ascii=False, indent=2)
+                logger.info(f"✅ Datei geschrieben: {filename}")
+                job['file_write_status'] = 'success'
             except Exception as e:
-                print(f"  ❌ Early odds error: {e}")
-                return False
-        
-        def collect_pre_match_data(data, headers):
-            """Pre-Match ausführliche Analyse"""
+                logger.error(f"❌ Fehler beim Schreiben der Datei {filename}: {e}")
+                job['file_write_status'] = 'error'
+                job['error_reason'] = f"File-Write-Error: {e}" + (f" ({reason})" if reason else "")
+
+        def collect_and_store_odds(job):
+            fixture_id = job.get('fixture_id', job.get('id'))
+            odds_api_key = os.getenv('ODDS_API_KEY', '')
+            odds_url = f"https://api.the-odds-api.com/v4/sports/soccer/odds/"
+            odds_params = {'apiKey': odds_api_key, 'regions': 'eu', 'markets': 'h2h'}
             try:
-                game_info = data['game_info']
-                
-                # Team Statistics
-                for team_id, team_type in [(game_info['home_team_id'], 'home'), (game_info['away_team_id'], 'away')]:
-                    stats_url = f"https://v3.football.api-sports.io/teams/statistics"
-                    current_season = datetime.now().year if datetime.now().month >= 8 else datetime.now().year - 1
-                    
-                    stats_params = {
-                        'league': game_info['league_id'],
-                        'season': current_season,
-                        'team': team_id
-                    }
-                    
-                    response = requests.get(stats_url, headers=headers, params=stats_params, timeout=15)
-                    if response.status_code == 200:
-                        data['data'][f'{team_type}_team_stats'] = response.json()
-                        print(f"  ✅ {team_type.title()} team stats collected")
-                
-                # Head-to-Head
-                h2h_url = f"https://v3.football.api-sports.io/fixtures/headtohead"
-                h2h_params = {
-                    'h2h': f"{game_info['home_team_id']}-{game_info['away_team_id']}",
-                    'last': 10
-                }
-                
-                response = requests.get(h2h_url, headers=headers, params=h2h_params, timeout=15)
-                if response.status_code == 200:
-                    data['data']['head_to_head'] = response.json()
-                    print("  ✅ Head-to-head collected")
-                
-                collect_odds_data(data, 'pre_match')
-                return True
-                
-            except Exception as e:
-                print(f"  ❌ Pre-match error: {e}")
-                return False
-        
-        def collect_team_news(data, headers):
-            """Team-News, Verletzungen, Form"""
-            try:
-                collect_odds_data(data, 'team_news')
-                print("  ✅ Team news phase completed")
-                return True
-                
-            except Exception as e:
-                print(f"  ❌ Team news error: {e}")
-                return False
-        
-        def collect_final_data(data, headers):
-            """Finale Daten: Aufstellungen, letzte Quoten"""
-            try:
-                fixture_id = data['fixture_id']
-                
-                # Lineups
-                lineups_url = f"https://v3.football.api-sports.io/fixtures/lineups"
-                lineups_params = {'fixture': fixture_id}
-                
-                response = requests.get(lineups_url, headers=headers, params=lineups_params, timeout=15)
-                if response.status_code == 200:
-                    lineups_data = response.json()
-                    if lineups_data.get('response'):
-                        data['data']['lineups'] = lineups_data
-                        print("  ✅ Lineups collected")
-                    else:
-                        print("  ⚠️ Lineups not yet available")
-                
-                collect_odds_data(data, 'final')
-                return True
-                
-            except Exception as e:
-                print(f"  ❌ Final data error: {e}")
-                return False
-        
-        def collect_odds_data(data, phase):
-            """Enhanced odds collection with intelligent team mapping"""
-            try:
-                import sys
-                sys.path.append('.')
-                from enhanced_mapping import collect_odds_data_enhanced, EnhancedTeamMapper
-                
-                # Initialize enhanced mapper
-                mapper = EnhancedTeamMapper(db_path='data/football_data.db', learn_mappings=True)
-                
-                # Use enhanced collection
-                collect_odds_data_enhanced(data, phase, mapper)
-                
-            except ImportError as e:
-                print(f"  ⚠️ Enhanced mapping not available, using basic mapping: {e}")
-                # Fallback to original logic
-                odds_api_key = os.getenv('ODDS_API_KEY')
-                if not odds_api_key:
-                    print("  ⚠️ No Odds API key configured")
-                    return
-                
-                game_info = data['game_info']
-                league_name = game_info['league']
-                
-                odds_sports_map = {
-                    'Premier League': 'soccer_epl',
-                    'La Liga': 'soccer_spain_la_liga',
-                    'Bundesliga': 'soccer_germany_bundesliga',
-                    'Serie A': 'soccer_italy_serie_a',
-                    'Ligue 1': 'soccer_france_ligue_one',
-                    'Champions League': 'soccer_uefa_champs_league',
-                    'Europa League': 'soccer_uefa_europa_league',
-                    'Copa Libertadores': 'soccer_conmebol_copa_libertadores',
-                    'Brasileirão Serie A': 'soccer_brazil_campeonato',
-                    'Liga Profesional Argentina': 'soccer_argentina_primera_division'
-                }
-                
-                sport = odds_sports_map.get(league_name)
-                if not sport:
-                    print(f"  ⚠️ No odds mapping for {league_name}")
-                    return
-                
-                odds_url = f"https://api.the-odds-api.com/v4/sports/{sport}/odds/"
-                odds_params = {
-                    'apiKey': odds_api_key,
-                    'regions': 'eu,us',
-                    'markets': 'h2h,spreads,totals',
-                    'oddsFormat': 'decimal',
-                    'dateFormat': 'iso'
-                }
-                
                 response = requests.get(odds_url, params=odds_params, timeout=15)
                 if response.status_code == 200:
                     odds_data = response.json()
-                    
-                    home_team = game_info['home_team'].lower()
-                    away_team = game_info['away_team'].lower()
-                    
-                    matching_game = None
-                    for game in odds_data:
-                        game_home = game.get('home_team', '').lower()
-                        game_away = game.get('away_team', '').lower()
-                        
-                        if (home_team in game_home or game_home in home_team or 
-                            any(word in game_home for word in home_team.split() if len(word) > 3)) and \
-                           (away_team in game_away or game_away in away_team or 
-                            any(word in game_away for word in away_team.split() if len(word) > 3)):
-                            matching_game = game
-                            break
-                    
-                    if matching_game:
-                        data['data'][f'odds_{phase}'] = matching_game
-                        print(f"  ✅ Odds collected for {phase}")
+                    if not odds_data:
+                        logger.warning(f"⚠️ Odds-API liefert keine Daten für Fixture {fixture_id}")
+                        job['error_reason'] = "Odds-API returned empty data"
                     else:
-                        print(f"  ⚠️ No matching game in odds data")
-                        
-                elif response.status_code == 429:
-                    print(f"  ⚠️ Odds API rate limited")
+                        filename = os.path.join(DATA_DIR, f"early_odds_{fixture_id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json")
+                        write_json_with_logging(filename, odds_data, job)
                 else:
-                    print(f"  ⚠️ Odds API error: {response.status_code}")
-                    
+                    logger.error(f"❌ Odds-API Error {response.status_code} für Fixture {fixture_id}: {response.text}")
+                    job['error_reason'] = f"Odds-API Error {response.status_code}: {response.text}"
             except Exception as e:
-                print(f"  ⚠️ Odds collection error: {e}")
+                logger.error(f"❌ Odds-API Exception für Fixture {fixture_id}: {e}")
+                job['error_reason'] = f"Odds-API Exception: {e}"
+
+        def collect_and_store_final_data(job):
+            fixture_id = job.get('fixture_id', job.get('id'))
+            try:
+                final_data = {"dummy": "final_data"}
+                filename = os.path.join(DATA_DIR, f"final_data_{fixture_id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json")
+                write_json_with_logging(filename, final_data, job)
+            except Exception as e:
+                logger.error(f"❌ Fehler beim Finaldaten-API-Call für Fixture {fixture_id}: {e}")
+                job['error_reason'] = f"Final-Data-API Exception: {e}"
+
+        jobs_path = os.path.join(os.path.dirname(__file__), 'jobs.json')
+        with open(jobs_path, 'r', encoding='utf-8') as f:
+            jobs = json.load(f)
+
+        for job in jobs:
+            if job.get('status') == 'pending':
+                logger.info(f"🔄 Starte Verarbeitung für Fixture {job.get('fixture_id', job.get('id'))}: {job.get('home_team')} vs {job.get('away_team')}")
+                collect_and_store_odds(job)
+                collect_and_store_final_data(job)
+                if job.get('file_write_status') == 'success':
+                    job['status'] = 'completed'
+                else:
+                    job['status'] = 'failed'
+
+        with open(jobs_path, 'w', encoding='utf-8') as f:
+            json.dump(jobs, f, indent=2, ensure_ascii=False)
+
+        logger.info("✅ Job-Verarbeitung abgeschlossen. Siehe jobs.json für Status und Fehler.")
+        EOF
+        job['status'] = 'completed' if success else 'failed'
+        job['processed_at'] = now.isoformat()
+        if not success:
+            job['error_reason'] = 'Collection failed'
         
-        # Job Processing Hauptlogik
-        try:
-            jobs_path = os.path.join(os.path.dirname(__file__), 'jobs.json')
-            with open(jobs_path, 'r') as f:
-                jobs = json.load(f)
-        except FileNotFoundError:
-            print("❌ No jobs file found")
-            exit(0)
+        processed_jobs.append(job['id'])
+        processed_count += 1
         
-        now = datetime.now(pytz.UTC)
-        processed_jobs = []
-        expired_jobs = []
-        
-        print(f"🔍 Checking {len(jobs)} jobs at {now}")
-        
-        # Priorisierte Job-Verarbeitung
-        pending_jobs = [job for job in jobs if job['status'] == 'pending']
-        pending_jobs.sort(key=lambda x: (x.get('priority', 'medium'), x['scheduled_for']))
-        
-        processed_count = 0
-        max_processing = 5  # Limit für API-Schonung
-        
-        for job in pending_jobs:
-            if processed_count >= max_processing:
-                print(f"⚠️ Processing limit reached ({max_processing})")
-                break
-                
-            scheduled_time = datetime.fromisoformat(job['scheduled_for'].replace('Z', '+00:00'))
-            
-            # Job bereit?
-            if scheduled_time <= now <= scheduled_time + timedelta(minutes=45):
-                print(f"\n🚀 Processing job {job['id']}")
-                success = collect_game_data(job)
-                
-                job['status'] = 'completed' if success else 'failed'
-                job['processed_at'] = now.isoformat()
-                if not success:
-                    job['error_reason'] = 'Collection failed'
-                
-                processed_jobs.append(job['id'])
-                processed_count += 1
-                
-            elif now > scheduled_time + timedelta(minutes=45):
-                # Job zu spät
-                job['status'] = 'expired'
-                job['processed_at'] = now.isoformat()
-                job['error_reason'] = 'Expired (too late)'
-                expired_jobs.append(job['id'])
+        elif now > scheduled_time + timedelta(minutes=45):
+            # Job zu spät
+            job['status'] = 'expired'
+            job['processed_at'] = now.isoformat()
+            job['error_reason'] = 'Expired (too late)'
+            expired_jobs.append(job['id'])
         
         # Aktualisiere jobs.json
         if processed_jobs or expired_jobs:
