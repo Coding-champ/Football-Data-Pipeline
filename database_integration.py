@@ -176,27 +176,28 @@ class FootballDatabase:
     def _store_odds_history(self, fixture_id: int, api_data: Dict, collection_type: str):
         """Store odds with historical tracking"""
         odds_keys = [k for k in api_data.keys() if k.startswith('odds_')]
-        
         for odds_key in odds_keys:
             odds_data = api_data[odds_key]
             if not odds_data or 'bookmakers' not in odds_data:
+                logger.warning(f"No odds or bookmakers for key {odds_key} in fixture {fixture_id}")
                 continue
-                
+            logger.info(f"Odds-Team-Mapping: {odds_data.get('home_team')} vs {odds_data.get('away_team')} (Fixture {fixture_id})")
             for bookmaker_data in odds_data['bookmakers']:
                 bookmaker = bookmaker_data['title']
-                
                 for market in bookmaker_data.get('markets', []):
                     market_type = market['key']  # 'h2h', 'spreads', 'totals'
-                    
                     # Extract odds based on market type
                     home_odds = draw_odds = away_odds = None
                     over_odds = under_odds = handicap = total_points = None
                     
                     if market_type == 'h2h':
                         outcomes = {o['name']: o['price'] for o in market['outcomes']}
-                        home_odds = outcomes.get(odds_data['home_team'])
-                        away_odds = outcomes.get(odds_data['away_team']) 
+                        home_odds = outcomes.get(odds_data.get('home_team'))
+                        away_odds = outcomes.get(odds_data.get('away_team'))
                         draw_odds = outcomes.get('Draw')
+                        logger.info(f"Storing odds for fixture {fixture_id}, bookmaker {bookmaker}, market {market_type}: home={home_odds}, draw={draw_odds}, away={away_odds}")
+                        if home_odds is None or away_odds is None:
+                            logger.warning(f"No odds found for teams: {odds_data.get('home_team')} vs {odds_data.get('away_team')} in fixture {fixture_id} (bookmaker: {bookmaker})")
                         
                     elif market_type == 'spreads':
                         for outcome in market['outcomes']:
