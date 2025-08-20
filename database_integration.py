@@ -6,7 +6,7 @@ Speichert API-Daten strukturiert für Trend-Analyse
 import json
 import sqlite3
 try:
-    import psycopg2
+    import psycopg2 # type: ignore
 except ImportError:
     psycopg2 = None
 from datetime import datetime, timedelta
