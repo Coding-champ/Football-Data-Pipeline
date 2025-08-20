@@ -338,7 +338,7 @@ jobs:
         def collect_and_store_odds(job):
             fixture_id = job.get('fixture_id', job.get('id'))
             odds_api_key = os.getenv('ODDS_API_KEY', '')
-            odds_url = f"https://api.the-odds-api.com/v4/sports/{}/odds/".format(fixture_id)
+            odds_url = f"https://api.the-odds-api.com/v4/sports/{fixture_id}/odds/"
             odds_params = {'apiKey': odds_api_key, 'regions': 'eu', 'markets': 'h2h'}
             try:
                 response = requests.get(odds_url, params=odds_params, timeout=15)
