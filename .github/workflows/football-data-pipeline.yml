@@ -338,7 +338,7 @@ jobs:
         def collect_and_store_odds(job):
             fixture_id = job.get('fixture_id', job.get('id'))
             odds_api_key = os.getenv('ODDS_API_KEY', '')
-            odds_url = f"https://api.the-odds-api.com/v4/sports/soccer/odds/"
+            odds_url = f"https://api.the-odds-api.com/v4/sports/{}/odds/".format(fixture_id)
             odds_params = {'apiKey': odds_api_key, 'regions': 'eu', 'markets': 'h2h'}
             try:
                 response = requests.get(odds_url, params=odds_params, timeout=15)
@@ -367,73 +367,73 @@ jobs:
                 logger.error(f"❌ Fehler beim Finaldaten-API-Call für Fixture {fixture_id}: {e}")
                 job['error_reason'] = f"Final-Data-API Exception: {e}"
 
-        jobs_path = os.path.join(os.path.dirname(__file__), 'jobs.json')
-        with open(jobs_path, 'r', encoding='utf-8') as f:
-            jobs = json.load(f)
+            jobs_path = os.path.join(os.path.dirname(__file__), 'jobs.json')
+            with open(jobs_path, 'r', encoding='utf-8') as f:
+                jobs = json.load(f)
 
-        for job in jobs:
-            if job.get('status') == 'pending':
-                logger.info(f"🔄 Starte Verarbeitung für Fixture {job.get('fixture_id', job.get('id'))}: {job.get('home_team')} vs {job.get('away_team')}")
-                collect_and_store_odds(job)
-                collect_and_store_final_data(job)
-                if job.get('file_write_status') == 'success':
-                    job['status'] = 'completed'
+            for job in jobs:
+                if job.get('status') == 'pending':
+                    logger.info(f"🔄 Starte Verarbeitung für Fixture {job.get('fixture_id', job.get('id'))}: {job.get('home_team')} vs {job.get('away_team')}")
+                    collect_and_store_odds(job)
+                    collect_and_store_final_data(job)
+                    if job.get('file_write_status') == 'success':
+                        job['status'] = 'completed'
                 else:
                     job['status'] = 'failed'
 
-        with open(jobs_path, 'w', encoding='utf-8') as f:
-            json.dump(jobs, f, indent=2, ensure_ascii=False)
+            with open(jobs_path, 'w', encoding='utf-8') as f:
+                json.dump(jobs, f, indent=2, ensure_ascii=False)
 
-        logger.info("✅ Job-Verarbeitung abgeschlossen. Siehe jobs.json für Status und Fehler.")
-        EOF
-        job['status'] = 'completed' if success else 'failed'
-        job['processed_at'] = now.isoformat()
-        if not success:
-            job['error_reason'] = 'Collection failed'
-        
-        processed_jobs.append(job['id'])
-        processed_count += 1
-        
-        elif now > scheduled_time + timedelta(minutes=45):
-            # Job zu spät
-            job['status'] = 'expired'
+            logger.info("✅ Job-Verarbeitung abgeschlossen. Siehe jobs.json für Status und Fehler.")
+           
+            job['status'] = 'completed' if success else 'failed'
             job['processed_at'] = now.isoformat()
-            job['error_reason'] = 'Expired (too late)'
-            expired_jobs.append(job['id'])
-        
-        # Aktualisiere jobs.json
-        if processed_jobs or expired_jobs:
-            jobs_path = os.path.join(os.path.dirname(__file__), 'jobs.json')
-            with open(jobs_path, 'w') as f:
-                json.dump(jobs, f)
+            if not success:
+                job['error_reason'] = 'Collection failed'
             
-            print(f"\n📊 Processing Summary:")
-            print(f"✅ Completed: {len(processed_jobs)}")
-            print(f"⏰ Expired: {len(expired_jobs)}")
+                processed_jobs.append(job['id'])
+                processed_count += 1
             
-            # Discord Success Notification
-            webhook_url = os.getenv('DISCORD_WEBHOOK_URL')
-            if webhook_url and processed_jobs:
-                embed = {
-                    "title": "✅ Data Collection Complete",
-                    "description": f"Successfully processed {len(processed_jobs)} jobs",
-                    "fields": [
-                        {
-                            "name": "Jobs Completed",
-                            "value": "\n".join(processed_jobs[:5]),
-                            "inline": True
-                        }
-                    ],
-                    "timestamp": datetime.now().isoformat()
-                }
+            elif now > scheduled_time + timedelta(minutes=45):
+                # Job zu spät
+                job['status'] = 'expired'
+                job['processed_at'] = now.isoformat()
+                job['error_reason'] = 'Expired (too late)'
+                expired_jobs.append(job['id'])
+            
+            # Aktualisiere jobs.json
+            if processed_jobs or expired_jobs:
+                jobs_path = os.path.join(os.path.dirname(__file__), 'jobs.json')
+                with open(jobs_path, 'w') as f:
+                    json.dump(jobs, f)
                 
-                try:
-                    requests.post(webhook_url, json={"embeds": [embed]})
-                except:
-                    pass
-        else:
-            print("ℹ️ No jobs ready for processing")
-        EOF
+                print(f"\n📊 Processing Summary:")
+                print(f"✅ Completed: {len(processed_jobs)}")
+                print(f"⏰ Expired: {len(expired_jobs)}")
+                
+                # Discord Success Notification
+                webhook_url = os.getenv('DISCORD_WEBHOOK_URL')
+                if webhook_url and processed_jobs:
+                    embed = {
+                        "title": "✅ Data Collection Complete",
+                        "description": f"Successfully processed {len(processed_jobs)} jobs",
+                        "fields": [
+                            {
+                                "name": "Jobs Completed",
+                                "value": "\n".join(processed_jobs[:5]),
+                                "inline": True
+                            }
+                        ],
+                        "timestamp": datetime.now().isoformat()
+                    }
+                    
+                    try:
+                        requests.post(webhook_url, json={"embeds": [embed]})
+                    except:
+                        pass
+            else:
+                print("ℹ️ No jobs ready for processing")
+            EOF
       env:
         API_FOOTBALL_KEY: ${{ secrets.API_FOOTBALL_KEY }}
         ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
