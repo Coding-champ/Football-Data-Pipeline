@@ -197,12 +197,15 @@ jobs:
             elif game['priority'] == 'high':
                 schedules = [
                     {'offset_hours': 24, 'type': 'early_odds'},
+                    {'offset_hours': 12, 'type': 'pre_match'},
                     {'offset_hours': 3, 'type': 'team_news'},
                     {'offset_hours': 1, 'type': 'final_data'}
                 ]
             else:
                 schedules = [
-                    {'offset_hours': 6, 'type': 'team_news'},
+                    {'offset_hours': 24, 'type': 'early_odds'},
+                    {'offset_hours': 12, 'type': 'pre_match'},
+                    {'offset_hours': 3, 'type': 'team_news'},
                     {'offset_hours': 1, 'type': 'final_data'}
                 ]
             
@@ -338,8 +341,9 @@ jobs:
         def collect_and_store_odds(job):
             fixture_id = job.get('fixture_id', job.get('id'))
             odds_api_key = os.getenv('ODDS_API_KEY', '')
-            odds_url = f"https://api.the-odds-api.com/v4/sports/{fixture_id}/odds/"
+            odds_url = f"https://api.the-odds-api.com/v4/sports/events/{fixture_id}/odds/"
             odds_params = {'apiKey': odds_api_key, 'regions': 'eu', 'markets': 'h2h'}
+            
             try:
                 response = requests.get(odds_url, params=odds_params, timeout=15)
                 if response.status_code == 200:
@@ -350,9 +354,28 @@ jobs:
                     else:
                         filename = os.path.join(DATA_DIR, f"early_odds_{fixture_id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json")
                         write_json_with_logging(filename, odds_data, job)
+
+                        # Initialize database and store odds data
+                        db_config = {
+                            'database': 'data/football_data.db'  # SQLite für GitHub Actions
+                            # Für PostgreSQL (in production):
+                            # 'host': os.getenv('DB_HOST'),
+                            # 'database': os.getenv('DB_NAME'), 
+                            # 'user': os.getenv('DB_USER'),
+                            # 'password': os.getenv('DB_PASSWORD')
+                        }
+                        db = FootballDatabase('sqlite', db_config)
+                        try:
+                            fixture_db_id = db.store_fixture_data(odds_data, 'early_odds')
+                            print(f"✅ Data stored in database for fixture {fixture_db_id}")
+                        except Exception as db_e:
+                            print(f"❌ Database error: {db_e}")
+                        finally:
+                            db.close()
                 else:
                     logger.error(f"❌ Odds-API Error {response.status_code} für Fixture {fixture_id}: {response.text}")
                     job['error_reason'] = f"Odds-API Error {response.status_code}: {response.text}"
+            
             except Exception as e:
                 logger.error(f"❌ Odds-API Exception für Fixture {fixture_id}: {e}")
                 job['error_reason'] = f"Odds-API Exception: {e}"
